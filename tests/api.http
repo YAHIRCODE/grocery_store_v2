@@ -1,0 +1,1260 @@
+### ============================================================
+### VARIABLES — actualiza el token despues de hacer login
+### ============================================================
+
+@baseUrl = http://localhost:8000/api
+@token = 14|CKz8rwGLlTmnLeAGdBnzRigEcRZz93uAeyVjWD2m2f010c38
+
+
+### ============================================================
+### 🔐 AUTH
+### ============================================================
+
+### Login — obtener token nuevo
+### Esperado: 200 + token en response.body.token
+POST {{baseUrl}}/login
+Content-Type: application/json
+
+{
+  "email": "yahir@gmail.com",
+  "password": "12345"
+}
+
+### Usuario autenticado — verificar que el token funciona
+### Esperado: 200 + user con role y employee
+GET {{baseUrl}}/me
+Authorization: Bearer {{token}}
+
+### Cerrar sesion — invalida el token actual
+### Esperado: 200
+POST {{baseUrl}}/logout
+Authorization: Bearer {{token}}
+
+
+### ============================================================
+### 🛡️ ROLES
+### ============================================================
+
+### Obtener todos los roles
+### Esperado: 200 + array de roles
+GET {{baseUrl}}/roles
+Authorization: Bearer {{token}}
+
+### Crear un rol
+### Esperado: 201
+POST {{baseUrl}}/roles
+Authorization: Bearer {{token}}
+Content-Type: application/json
+Accept: application/json
+
+{
+  "name": "Cajero",
+  "description": "Realizar ventas y gestionar clientes"
+}
+
+### Actualizar un rol (usa un ID real)
+### Esperado: 200
+PUT {{baseUrl}}/roles/2
+Authorization: Bearer {{token}}
+Content-Type: application/json
+Accept: application/json
+
+{
+  "name": "Cajero Actualizado",
+  "description": "Realizar ventas y gestionar clientes"
+}
+
+### Eliminar un rol (usar un ID sin dependencias)
+### Esperado: 200
+DELETE {{baseUrl}}/roles/8
+Authorization: Bearer {{token}}
+Accept: application/json
+
+
+### ============================================================
+### 🗂️ CATEGORIES
+### ============================================================
+
+### Obtener todas las categorias
+### Esperado: 200 + array de categorias con products_count
+GET {{baseUrl}}/categories
+Authorization: Bearer {{token}}
+
+### Crear una categoria
+### Esperado: 201
+POST {{baseUrl}}/categories
+Authorization: Bearer {{token}}
+Content-Type: application/json
+Accept: application/json
+
+{
+  "name": "Snacks",
+  "description": "Botanas y frituras"
+}
+
+### Obtener una categoria por ID (usa un ID real)
+### Esperado: 200 + categoria con products
+GET {{baseUrl}}/categories/1
+Authorization: Bearer {{token}}
+
+### Actualizar una categoria
+### Esperado: 200
+PUT {{baseUrl}}/categories/12
+Authorization: Bearer {{token}}
+Content-Type: application/json
+Accept: application/json
+
+{
+  "name": "Limpieza",
+  "description": "Productos de limpieza del hogar"
+}
+
+### Eliminar una categoria sin productos asociados
+### Esperado: 200
+DELETE {{baseUrl}}/categories/12
+Authorization: Bearer {{token}}
+Accept: application/json
+
+### Intentar eliminar una categoria CON productos (debe fallar)
+### Esperado: 409
+DELETE {{baseUrl}}/categories/1
+Authorization: Bearer {{token}}
+Accept: application/json
+
+
+### ============================================================
+### 🏭 SUPPLIERS
+### ============================================================
+
+### Obtener todos los proveedores
+### Esperado: 200
+GET {{baseUrl}}/suppliers
+Authorization: Bearer {{token}}
+
+### Crear un proveedor
+### Esperado: 201
+POST {{baseUrl}}/suppliers
+Authorization: Bearer {{token}}
+Content-Type: application/json
+Accept: application/json
+
+{
+  "company_name": "Distribuidora XYZ",
+  "contact_name": "Roberto Sanchez",
+  "phone": "3311112222",
+  "email": "contacto@xyz.mx"
+}
+
+### Ver un proveedor (usa un ID real)
+### Esperado: 200 + supplier con debts
+GET {{baseUrl}}/suppliers/1
+Authorization: Bearer {{token}}
+
+### Actualizar un proveedor
+### Esperado: 200
+PUT {{baseUrl}}/suppliers/11
+Authorization: Bearer {{token}}
+Content-Type: application/json
+Accept: application/json
+
+{
+  "company_name": "Distribuidora XYZ Alpha",
+  "contact_name": "Roberto Sanchez",
+  "phone": "3311112222",
+  "email": "contacto@xyz.mx"
+}
+
+### Eliminar un proveedor sin deudas pendientes
+### Esperado: 200
+DELETE {{baseUrl}}/suppliers/11
+Authorization: Bearer {{token}}
+Accept: application/json
+
+
+### ============================================================
+### 📦 PRODUCTS
+### ============================================================
+
+### Obtener todos los productos
+### Esperado: 200 + array de productos con category
+GET {{baseUrl}}/products
+Authorization: Bearer {{token}}
+
+### Crear un producto
+### Esperado: 201
+POST {{baseUrl}}/products
+Authorization: Bearer {{token}}
+Content-Type: application/json
+Accept: application/json
+
+{
+  "name": "Coca Cola 600ml",
+  "description": "Refresco sabor cola",
+  "price": 18.50,
+  "purchase_price": 12.00,
+  "stock": 50,
+  "category_id": 1,
+  "barcode": "750343534345467890",
+  "min_stock": 5
+}
+
+### Obtener un producto por ID
+### Esperado: 200
+GET {{baseUrl}}/products/21
+Authorization: Bearer {{token}}
+
+### Actualizar un producto
+### Esperado: 200
+PUT {{baseUrl}}/products/21
+Authorization: Bearer {{token}}
+Content-Type: application/json
+Accept: application/json
+
+{
+  "name": "Coca Cola 600ml",
+  "description": "Refresco sabor cola (actualizado)",
+  "price": 19.00,
+  "purchase_price": 12.00,
+  "stock": 60,
+  "category_id": 1,
+  "barcode": "750343534345467890",
+  "min_stock": 5
+}
+
+### Eliminar un producto (soft delete)
+### Esperado: 200
+DELETE {{baseUrl}}/products/20
+Authorization: Bearer {{token}}
+Accept: application/json
+
+### Obtener productos eliminados (papelera)
+### Esperado: 200
+GET {{baseUrl}}/products/trashed
+Authorization: Bearer {{token}}
+Accept: application/json
+
+### Restaurar un producto eliminado
+### Esperado: 200
+POST {{baseUrl}}/products/20/restore
+Authorization: Bearer {{token}}
+Accept: application/json
+
+### Eliminar permanentemente (solo Admin)
+### Esperado: 200
+DELETE {{baseUrl}}/products/20/force-delete
+Authorization: Bearer {{token}}
+Accept: application/json
+
+### Crear codigo de proveedor — Proveedor 1 le pone "2781" al Arroz
+### Esperado: 201
+POST {{baseUrl}}/product-supplier-codes
+Authorization: Bearer {{token}}
+Content-Type: application/json
+
+{
+  "product_id": 6,
+  "supplier_id": 1,
+  "code": "2781"
+}
+
+### Proveedor 7 le pone "9034" al MISMO Arroz
+### Esperado: 201
+POST {{baseUrl}}/product-supplier-codes
+Authorization: Bearer {{token}}
+Content-Type: application/json
+
+{
+  "product_id": 6,
+  "supplier_id": 7,
+  "code": "9034"
+}
+
+### Match — ticket del proveedor 1, busca por codigo "2781"
+### Esperado: 200, matched con matched_by: "codigo"
+POST {{baseUrl}}/products/match
+Authorization: Bearer {{token}}
+Content-Type: application/json
+
+{
+  "supplier_id": 1,
+  "products": [
+    { "nombre": "ARROZ", "codigo": "2781", "cantidad": 10, "precio_unitario": 12.5 }
+  ]
+}
+
+### Match — ticket del proveedor 7, SU codigo distinto "9034"
+### Esperado: 200, matched con matched_by: "codigo"
+POST {{baseUrl}}/products/match
+Authorization: Bearer {{token}}
+Content-Type: application/json
+
+{
+  "supplier_id": 7,
+  "products": [
+    { "nombre": "ARROZ", "codigo": "9034", "cantidad": 10, "precio_unitario": 12.5 }
+  ]
+}
+
+### Match — buscar por nombre (sin supplier_id en el body)
+### Esperado: 200, matched con matched_by: "nombre"
+POST {{baseUrl}}/products/match
+Authorization: Bearer {{token}}
+Content-Type: application/json
+
+{
+  "products": [
+    { "nombre": "Coca Cola 600ml", "cantidad": 5, "precio_unitario": 18.50 }
+  ]
+}
+
+### Match — producto inexistente
+### Esperado: 200, unmatched incluye el nombre
+POST {{baseUrl}}/products/match
+Authorization: Bearer {{token}}
+Content-Type: application/json
+
+{
+  "products": [
+    { "nombre": "Producto Inventado XYZ", "cantidad": 5, "precio_unitario": 30.00 }
+  ]
+}
+
+
+### ============================================================
+### 👷 EMPLOYEES
+### ============================================================
+
+### Obtener todos los empleados
+### Esperado: 200
+GET {{baseUrl}}/employees
+Authorization: Bearer {{token}}
+
+### Crear un empleado (requiere role_id existente)
+### Esperado: 201 + temporary_password
+POST {{baseUrl}}/employees
+Authorization: Bearer {{token}}
+Content-Type: application/json
+Accept: application/json
+
+{
+  "first_name": "Maria",
+  "last_name": "Lopez",
+  "email": "maria.lopez@tienda.com",
+  "phone": "3312345678",
+  "full_address": "Calle Falsa 123",
+  "payroll_id": "EMP-013",
+  "hourly_rate": 75.00,
+  "card_number": "1234567890123456",
+  "role_id": 2
+}
+
+### Ver un empleado (usa un ID real)
+### Esperado: 200
+GET {{baseUrl}}/employees/1
+Authorization: Bearer {{token}}
+
+### Actualizar un empleado
+### Esperado: 200
+PUT {{baseUrl}}/employees/1
+Authorization: Bearer {{token}}
+Content-Type: application/json
+Accept: application/json
+
+{
+  "first_name": "Ana Maria",
+  "last_name": "Gutierrez",
+  "email": "ana.lopez@tienda.com",
+  "phone": "3312345678",
+  "full_address": "Calle Falsa 123",
+  "payroll_id": "EMP-010",
+  "hourly_rate": 80.00,
+  "card_number": "1234567890123456",
+  "role_id": 2
+}
+
+### Eliminar un empleado sin ventas
+### Esperado: 200
+DELETE {{baseUrl}}/employees/13
+Authorization: Bearer {{token}}
+Accept: application/json
+
+
+### ============================================================
+### 🧑 CLIENTS
+### ============================================================
+
+### Obtener todos los clientes
+### Esperado: 200
+GET {{baseUrl}}/clients
+Authorization: Bearer {{token}}
+
+### Crear un cliente
+### Esperado: 201
+POST {{baseUrl}}/clients
+Authorization: Bearer {{token}}
+Content-Type: application/json
+Accept: application/json
+
+{
+  "first_name": "Carlos",
+  "last_name": "Ramirez",
+  "email": "carlos.ramirez@email.com",
+  "phone": "3319998888",
+  "street_1": "Av. Vallarta 1500",
+  "street_2": null,
+  "neighborhood": "Americana"
+}
+
+### Ver un cliente (usa un ID real, incluye debts)
+### Esperado: 200
+GET {{baseUrl}}/clients/1
+Authorization: Bearer {{token}}
+
+### Actualizar un cliente
+### Esperado: 200
+PUT {{baseUrl}}/clients/13
+Authorization: Bearer {{token}}
+Content-Type: application/json
+Accept: application/json
+
+{
+  "first_name": "Carlos",
+  "last_name": "Ramirez",
+  "email": "carlos.ramirez@email.com",
+  "phone": "3319998889",
+  "street_1": "Av. Vallarta 1500",
+  "street_2": "Col. Centro",
+  "neighborhood": "Americana"
+}
+
+### Eliminar un cliente sin deudas pendientes
+### Esperado: 200
+DELETE {{baseUrl}}/clients/13
+Authorization: Bearer {{token}}
+Accept: application/json
+
+### Ver clientes en papelera
+### Esperado: 200
+GET {{baseUrl}}/clients/trashed
+Authorization: Bearer {{token}}
+Accept: application/json
+
+### Restaurar un cliente eliminado
+### Esperado: 200
+POST {{baseUrl}}/clients/13/restore
+Authorization: Bearer {{token}}
+Accept: application/json
+
+
+### ============================================================
+### 💳 CLIENT DEBTS
+### ============================================================
+
+### Obtener deudas de clientes
+### Esperado: 200
+GET {{baseUrl}}/client-debts
+Authorization: Bearer {{token}}
+
+### Crear una deuda de cliente
+### Esperado: 201
+POST {{baseUrl}}/client-debts
+Authorization: Bearer {{token}}
+Content-Type: application/json
+Accept: application/json
+
+{
+  "client_id": 1,
+  "start_date": "2026-08-01",
+  "due_date": "2026-08-15",
+  "balance_due": 160.00,
+  "status": "pending"
+}
+
+### Ver una deuda
+### Esperado: 200
+GET {{baseUrl}}/client-debts/1
+Authorization: Bearer {{token}}
+
+### Actualizar una deuda — marcar como pagada
+### Esperado: 200
+PUT {{baseUrl}}/client-debts/1
+Authorization: Bearer {{token}}
+Content-Type: application/json
+Accept: application/json
+
+{
+  "client_id": 1,
+  "start_date": "2026-08-01",
+  "due_date": "2026-08-15",
+  "balance_due": 150.00,
+  "status": "paid"
+}
+
+### Intentar eliminar una deuda PENDIENTE (debe rechazar)
+### Esperado: 409
+DELETE {{baseUrl}}/client-debts/1
+Authorization: Bearer {{token}}
+Accept: application/json
+
+### Eliminar una deuda PAGADA
+### Esperado: 200
+DELETE {{baseUrl}}/client-debts/1
+Authorization: Bearer {{token}}
+Accept: application/json
+
+
+### ============================================================
+### 💰 SUPPLIER DEBTS
+### ============================================================
+
+### Obtener deudas de proveedores
+### Esperado: 200
+GET {{baseUrl}}/supplier-debts
+Authorization: Bearer {{token}}
+
+### Crear una deuda de proveedor
+### Esperado: 201
+POST {{baseUrl}}/supplier-debts
+Authorization: Bearer {{token}}
+Content-Type: application/json
+Accept: application/json
+
+{
+  "supplier_id": 1,
+  "start_date": "2026-08-01",
+  "due_date": "2026-08-30",
+  "amount": 2500.00,
+  "status": "pending"
+}
+
+### Ver una deuda de proveedor
+### Esperado: 200
+GET {{baseUrl}}/supplier-debts/13
+Authorization: Bearer {{token}}
+
+### Actualizar una deuda — marcar como pagada
+### Esperado: 200
+PUT {{baseUrl}}/supplier-debts/13
+Authorization: Bearer {{token}}
+Content-Type: application/json
+Accept: application/json
+
+{
+  "supplier_id": 1,
+  "start_date": "2026-08-01",
+  "due_date": "2026-08-30",
+  "amount": 2500.00,
+  "status": "paid"
+}
+
+### Eliminar una deuda PAGADA
+### Esperado: 200
+DELETE {{baseUrl}}/supplier-debts/12
+Authorization: Bearer {{token}}
+Accept: application/json
+
+
+### ============================================================
+### 📝 SUPPLIER NOTES (Notas de Trato)
+### ============================================================
+
+### Obtener todas las notas
+### Esperado: 200
+GET {{baseUrl}}/supplier-notes
+Authorization: Bearer {{token}}
+Accept: application/json
+
+### Filtrar notas por status
+### Esperado: 200
+GET {{baseUrl}}/supplier-notes?status=pending
+Authorization: Bearer {{token}}
+Accept: application/json
+
+### Crear una nota de trato
+### Esperado: 201
+POST {{baseUrl}}/supplier-notes
+Authorization: Bearer {{token}}
+Content-Type: application/json
+Accept: application/json
+
+{
+  "supplier_id": 1,
+  "total_amount": 500.00,
+  "delivery_date": "2026-08-15",
+  "reminders": "Llamar antes de entregar",
+  "products": [
+    {
+      "product_id": 6,
+      "quantity_agreed": 10,
+      "price_agreed": 12.50,
+      "discount": 0,
+      "is_gift": false
+    }
+  ]
+}
+
+### Ver una nota (usa un ID real)
+### Esperado: 200 + note con supplier, details, createdBy, confirmedBy
+GET {{baseUrl}}/supplier-notes/3
+Authorization: Bearer {{token}}
+
+### Actualizar una nota pendiente
+### Esperado: 200
+PUT {{baseUrl}}/supplier-notes/2
+Authorization: Bearer {{token}}
+Content-Type: application/json
+Accept: application/json
+
+{
+  "supplier_id": 1,
+  "total_amount": 500.00,
+  "delivery_date": "2026-08-15",
+  "reminders": "Actualizado"
+}
+
+### Intentar editar una nota CONFIRMADA (debe rechazar)
+### Esperado: 400
+PUT {{baseUrl}}/supplier-notes/4
+Authorization: Bearer {{token}}
+Content-Type: application/json
+Accept: application/json
+
+{
+  "supplier_id": 1,
+  "total_amount": 999.00,
+  "delivery_date": "2026-08-20",
+  "reminders": "Intento de bypass"
+}
+
+### Confirmar nota — actualiza stock
+### Esperado: 200 + diferencias
+PUT {{baseUrl}}/supplier-notes/2/confirm
+Authorization: Bearer {{token}}
+Content-Type: application/json
+Accept: application/json
+
+{
+  "products": [
+    { "product_id": 6, "quantity_received": 10 }
+  ]
+}
+
+### Confirmar nota con observaciones (cantidades diferentes)
+### Esperado: 200 + diferencias
+PUT {{baseUrl}}/supplier-notes/8/confirm
+Authorization: Bearer {{token}}
+Content-Type: application/json
+Accept: application/json
+
+{
+  "products": [
+    { "product_id": 6, "quantity_received": 8 }
+  ],
+  "observations": "El proveedor solo trajo 8 de los 10 acordados"
+}
+
+### Intentar confirmar con productos DUPLICADOS (debe rechazar)
+### Esperado: 422
+PUT {{baseUrl}}/supplier-notes/6/confirm
+Authorization: Bearer {{token}}
+Content-Type: application/json
+Accept: application/json
+
+{
+  "products": [
+    { "product_id": 6, "quantity_received": 5 },
+    { "product_id": 6, "quantity_received": 3 }
+  ]
+}
+
+### Registrar pago de nota confirmada
+### Esperado: 200
+PUT {{baseUrl}}/supplier-notes/3/pay
+Authorization: Bearer {{token}}
+Accept: application/json
+
+### Ver historial de notas confirmadas/pagadas
+### Esperado: 200
+GET {{baseUrl}}/supplier-notes/historial
+Authorization: Bearer {{token}}
+Accept: application/json
+
+### Eliminar una nota
+### Esperado: 200
+DELETE {{baseUrl}}/supplier-notes/4
+Authorization: Bearer {{token}}
+Accept: application/json
+
+
+### ============================================================
+### 📊 INVENTORY ADJUSTMENTS
+### ============================================================
+
+### Obtener ajustes de inventario
+### Esperado: 200
+GET {{baseUrl}}/inventory-adjustments
+Authorization: Bearer {{token}}
+
+### Crear un ajuste — addition (suma stock)
+### Esperado: 200
+POST {{baseUrl}}/inventory-adjustments
+Authorization: Bearer {{token}}
+Content-Type: application/json
+Accept: application/json
+
+{
+  "product_id": 8,
+  "quantity": 45,
+  "adjustment_type": "addition",
+  "reason": "Reposicion de stock"
+}
+
+### Crear un ajuste — subtraction (resta stock)
+### Esperado: 200
+POST {{baseUrl}}/inventory-adjustments
+Authorization: Bearer {{token}}
+Content-Type: application/json
+Accept: application/json
+
+{
+  "product_id": 8,
+  "quantity": 5,
+  "adjustment_type": "subtraction",
+  "reason": "Correccion de inventario"
+}
+
+### Intentar subtraction sin stock suficiente (debe rechazar)
+### Esperado: 422
+POST {{baseUrl}}/inventory-adjustments
+Authorization: Bearer {{token}}
+Content-Type: application/json
+Accept: application/json
+
+{
+  "product_id": 8,
+  "quantity": 99999,
+  "adjustment_type": "subtraction",
+  "reason": "Stock insuficiente"
+}
+
+### Obtener un ajuste por ID
+### Esperado: 200
+GET {{baseUrl}}/inventory-adjustments/19
+Authorization: Bearer {{token}}
+
+### Actualizar un ajuste
+### Esperado: 200
+PUT {{baseUrl}}/inventory-adjustments/19
+Authorization: Bearer {{token}}
+Content-Type: application/json
+Accept: application/json
+
+{
+  "product_id": 8,
+  "quantity": 3,
+  "adjustment_type": "subtraction",
+  "reason": "Correccion de inventario"
+}
+
+### Eliminar un ajuste (revierte el stock)
+### Esperado: 200
+DELETE {{baseUrl}}/inventory-adjustments/19
+Authorization: Bearer {{token}}
+Accept: application/json
+
+
+### ============================================================
+### 🧾 SALES
+### ============================================================
+
+### 0. Verificar turno activo antes de vender
+### Si no hay turno, debe retornar 404
+GET {{baseUrl}}/cash-registers/active
+Authorization: Bearer {{token}}
+
+### 0.1 Abrir turno (solo si no hay uno activo)
+### Esperado: 201
+POST {{baseUrl}}/cash-registers/open
+Authorization: Bearer {{token}}
+Content-Type: application/json
+Accept: application/json
+
+{
+  "opening_cash": 500.00
+}
+
+### Obtener todas las ventas
+### Esperado: 200
+GET {{baseUrl}}/sales
+Authorization: Bearer {{token}}
+
+### 1. Crear venta — UN solo producto, pago 100% efectivo
+### Esperado: 201 + sale_group_id + change_amount
+POST {{baseUrl}}/sales
+Authorization: Bearer {{token}}
+Content-Type: application/json
+Accept: application/json
+
+{
+  "products": [
+    { "product_id": 11, "quantity": 2, "sale_unit_type": "unit" }
+  ],
+  "client_id": null,
+  "payment_method": "cash",
+  "cash_amount": 98.00,
+  "card_amount": 0
+}
+
+### 2. Crear venta — VARIOS productos, pago 100% tarjeta
+### Esperado: 201
+POST {{baseUrl}}/sales
+Authorization: Bearer {{token}}
+Content-Type: application/json
+Accept: application/json
+
+{
+  "products": [
+    { "product_id": 6, "quantity": 1, "sale_unit_type": "unit" },
+    { "product_id": 12, "quantity": 1, "sale_unit_type": "unit" }
+  ],
+  "client_id": null,
+  "payment_method": "card",
+  "cash_amount": 0,
+  "card_amount": 90.00
+}
+
+### 3. Crear venta — VARIOS productos, pago MIXTO (efectivo + tarjeta)
+### Esperado: 201 + sale_group_id para usar en cancelar grupo
+POST {{baseUrl}}/sales
+Authorization: Bearer {{token}}
+Content-Type: application/json
+Accept: application/json
+
+{
+  "products": [
+    { "product_id": 6, "quantity": 1, "sale_unit_type": "unit" },
+    { "product_id": 12, "quantity": 1, "sale_unit_type": "unit" }
+  ],
+  "client_id": null,
+  "payment_method": "mixed",
+  "cash_amount": 40.00,
+  "card_amount": 24.00
+}
+
+### 4. Pago insuficiente — debe rechazar
+### Esperado: 422 "El monto pagado no cubre el total"
+POST {{baseUrl}}/sales
+Authorization: Bearer {{token}}
+Content-Type: application/json
+Accept: application/json
+
+{
+  "products": [
+    { "product_id": 6, "quantity": 5, "sale_unit_type": "unit" }
+  ],
+  "client_id": null,
+  "payment_method": "cash",
+  "cash_amount": 5.00,
+  "card_amount": 0
+}
+
+### 5. Stock insuficiente — debe rechazar
+### Esperado: 400 "No hay suficiente stock"
+POST {{baseUrl}}/sales
+Authorization: Bearer {{token}}
+Content-Type: application/json
+Accept: application/json
+
+{
+  "products": [
+    { "product_id": 6, "quantity": 9999, "sale_unit_type": "unit" }
+  ],
+  "client_id": null,
+  "payment_method": "cash",
+  "cash_amount": 999999,
+  "card_amount": 0
+}
+
+### Ver una venta por ID (usa un ID real de los pasos 1-3)
+### Esperado: 200
+GET {{baseUrl}}/sales/25
+Authorization: Bearer {{token}}
+
+### 6. Actualizar venta — cambiar a producto MAS BARATO (genera cambio)
+### Esperado: 200 + cambio_a_entregar > 0
+PUT {{baseUrl}}/sales/21
+Authorization: Bearer {{token}}
+Content-Type: application/json
+Accept: application/json
+
+{
+  "product_id": 10,
+  "quantity": 1
+}
+
+### 7. Actualizar venta — producto MAS CARO sin pagar diferencia (debe rechazar)
+### Esperado: 422 "Faltan $X por cobrar"
+PUT {{baseUrl}}/sales/25
+Authorization: Bearer {{token}}
+Content-Type: application/json
+Accept: application/json
+
+{
+  "product_id": 20,
+  "quantity": 1
+}
+
+### 8. Actualizar venta — producto MAS CARO, cubriendo la diferencia
+### Esperado: 200
+PUT {{baseUrl}}/sales/25
+Authorization: Bearer {{token}}
+Content-Type: application/json
+Accept: application/json
+
+{
+  "product_id": 13,
+  "quantity": 2,
+  "additional_cash": 20.00,
+  "additional_card": 50.00
+}
+
+### 9. Cancelar UNA sola linea de venta
+### Esperado: 200 + stock devuelto
+POST {{baseUrl}}/sales/17/cancel
+Authorization: Bearer {{token}}
+Accept: application/json
+
+### 10. Intentar cancelar la misma linea OTRA VEZ (debe rechazar)
+### Esperado: 400 "ya esta cancelada"
+POST {{baseUrl}}/sales/17/cancel
+Authorization: Bearer {{token}}
+Accept: application/json
+
+### 11. Revertir cancelacion (solo Administrador)
+### Esperado: 200
+POST {{baseUrl}}/sales/25/revert
+Authorization: Bearer {{token}}
+Accept: application/json
+
+### 12. Cancelar TICKET COMPLETO (usa sale_group_id real del paso 3)
+### Copia el sale_group_id que te devolvio el paso 3
+### Esperado: 200 + lineas_canceladas
+POST {{baseUrl}}/sales/group/91f99b7e-9038-4ce8-82b5-033be9a1a701/cancel
+Authorization: Bearer {{token}}
+Accept: application/json
+
+### 13. Intentar cancelar el mismo grupo OTRA VEZ (reporta lineas ya canceladas)
+### Esperado: 200 + lineas_ya_canceladas_previamente
+POST {{baseUrl}}/sales/group/91f99b7e-9038-4ce8-82b5-033be9a1a701/cancel
+Authorization: Bearer {{token}}
+Accept: application/json
+
+### 14. Eliminar una venta — si estaba cancelada NO debe duplicar stock
+### Esperado: 200
+DELETE {{baseUrl}}/sales/17
+Authorization: Bearer {{token}}
+Accept: application/json
+
+
+### ============================================================
+### 💵 CASH REGISTERS (Corte de Caja)
+### ============================================================
+
+### Obtener todos los cortes de caja
+### Esperado: 200
+GET {{baseUrl}}/cash-registers
+Authorization: Bearer {{token}}
+
+### Ver turno activo
+### Si no hay turno abierto: 404
+### Si hay turno: 200 + data con el turno
+GET {{baseUrl}}/cash-registers/active
+Authorization: Bearer {{token}}
+
+### Abrir turno
+### Esperado: 201
+POST {{baseUrl}}/cash-registers/open
+Authorization: Bearer {{token}}
+Content-Type: application/json
+Accept: application/json
+
+{
+  "opening_cash": 500.00
+}
+
+### Intentar abrir OTRO turno sin cerrar el primero (debe rechazar)
+### Esperado: 400 "Ya tienes un turno abierto"
+POST {{baseUrl}}/cash-registers/open
+Authorization: Bearer {{token}}
+Content-Type: application/json
+Accept: application/json
+
+{
+  "opening_cash": 500.00
+}
+
+### Ver un corte de caja especifico
+### Esperado: 200 + data con sales
+GET {{baseUrl}}/cash-registers/1
+Authorization: Bearer {{token}}
+
+### Cerrar turno
+### Revisa que total_efectivo_ventas y total_tarjeta_ventas
+### coincidan con la suma de las ventas que hiciste
+### Esperado: 200 + total_efectivo_ventas + total_tarjeta_ventas + diferencia
+POST {{baseUrl}}/cash-registers/1/close
+Authorization: Bearer {{token}}
+Content-Type: application/json
+Accept: application/json
+
+{
+  "closed_cash": 850.00
+}
+
+
+### ============================================================
+### 🏦 PROVIDER FUNDS (Fondo de Proveedores)
+### ============================================================
+
+### Ver fondo de proveedores + notas pendientes
+### Esperado: 200 + data + suppliers_pending + supplier_notes_pending
+GET {{baseUrl}}/provider-funds
+Authorization: Bearer {{token}}
+
+### Ver un fondo especifico
+### Esperado: 200
+GET {{baseUrl}}/provider-funds/1
+Authorization: Bearer {{token}}
+
+### Actualizar el fondo
+### Esperado: 200
+PUT {{baseUrl}}/provider-funds/1
+Authorization: Bearer {{token}}
+Content-Type: application/json
+Accept: application/json
+
+{
+  "defined_amount": 5000.00,
+  "extraction_limit": 2000.00,
+  "available_balance": 5000.00
+}
+
+### Extraer del fondo (registrar pago a proveedor)
+### Esperado: 200
+POST {{baseUrl}}/provider-funds/1/extract
+Authorization: Bearer {{token}}
+Content-Type: application/json
+Accept: application/json
+
+{
+  "amount": 1000.00
+}
+
+### Intentar extraer MAS que el saldo disponible (debe rechazar)
+### Esperado: 400 "excede el saldo disponible"
+POST {{baseUrl}}/provider-funds/1/extract
+Authorization: Bearer {{token}}
+Content-Type: application/json
+Accept: application/json
+
+{
+  "amount": 999999.00
+}
+
+
+### ============================================================
+### 📈 DASHBOARD
+### ============================================================
+
+### Dashboard general
+### Esperado: 200 + ventasHoy, ventasHoyTotal, productosConBajoStock, etc.
+GET {{baseUrl}}/dashboard
+Authorization: Bearer {{token}}
+
+### Reporte de ventas
+### Esperado: 200 + data paginado
+GET {{baseUrl}}/dashboard/reportes/ventas
+Authorization: Bearer {{token}}
+
+### Reporte de productos
+### Esperado: 200 + data
+GET {{baseUrl}}/dashboard/reportes/productos
+Authorization: Bearer {{token}}
+
+### Reporte de clientes
+### Esperado: 200 + data con debts
+GET {{baseUrl}}/dashboard/reportes/clientes
+Authorization: Bearer {{token}}
+
+### Reporte de deudas
+### Esperado: 200 + data
+GET {{baseUrl}}/dashboard/reportes/deudas
+Authorization: Bearer {{token}}
+
+### Descargar reporte PDF
+### Esperado: 200 + archivo PDF
+GET {{baseUrl}}/reportes/dashboard/pdf
+Authorization: Bearer {{token}}
+
+### Descargar reporte CSV
+### Esperado: 200 + archivo CSV
+GET {{baseUrl}}/reportes/dashboard/csv
+Authorization: Bearer {{token}}
+
+
+### ============================================================
+### 🧪 PRUEBAS DE FLUJO COMPLETO
+### ============================================================
+
+### Flujo: Abrir turno -> Vender -> Cerrar turno -> Verificar diferencias
+### Paso 1: Abrir turno
+POST {{baseUrl}}/cash-registers/open
+Authorization: Bearer {{token}}
+Content-Type: application/json
+Accept: application/json
+
+{
+  "opening_cash": 500.00
+}
+
+### Paso 2: Vender — Pan Integral x2 = $96, paga $98 en efectivo
+### Esperado: 201 + change_amount = 2.00
+POST {{baseUrl}}/sales
+Authorization: Bearer {{token}}
+Content-Type: application/json
+Accept: application/json
+
+{
+  "products": [
+    { "product_id": 11, "quantity": 2, "sale_unit_type": "unit" }
+  ],
+  "client_id": null,
+  "payment_method": "cash",
+  "cash_amount": 98.00,
+  "card_amount": 0
+}
+
+### Paso 3: Ticket de 2 productos, pago mixto con cambio
+### Esperado: 201
+POST {{baseUrl}}/sales
+Authorization: Bearer {{token}}
+Content-Type: application/json
+
+{
+  "products": [
+    { "product_id": 6, "quantity": 1, "sale_unit_type": "unit" },
+    { "product_id": 12, "quantity": 1, "sale_unit_type": "unit" }
+  ],
+  "client_id": null,
+  "payment_method": "mixed",
+  "cash_amount": 30.00,
+  "card_amount": 30.00
+}
+
+### Paso 4: Cerrar turno
+### Revisa que los totales coincidan con lo vendido
+POST {{baseUrl}}/cash-registers/1/close
+Authorization: Bearer {{token}}
+Content-Type: application/json
+Accept: application/json
+
+{
+  "closed_cash": 850.00
+}
+
+
+### ============================================================
+### 🔄 FLUJO: NOTA DE PROVEEDOR -> CONFIRMAR -> STOCK ACTUALIZADO
+### ============================================================
+
+### Paso 1: Crear nota de trato
+POST {{baseUrl}}/supplier-notes
+Authorization: Bearer {{token}}
+Content-Type: application/json
+Accept: application/json
+
+{
+  "supplier_id": 1,
+  "total_amount": 500.00,
+  "delivery_date": "2026-08-15",
+  "reminders": "Llamar antes de entregar",
+  "products": [
+    {
+      "product_id": 6,
+      "quantity_agreed": 10,
+      "price_agreed": 12.50,
+      "discount": 0,
+      "is_gift": false
+    }
+  ]
+}
+
+### Paso 2: Confirmar con cantidades reales (menos de lo acordado)
+### Stock del producto 6 debe incrementarse en 8
+PUT {{baseUrl}}/supplier-notes/2/confirm
+Authorization: Bearer {{token}}
+Content-Type: application/json
+Accept: application/json
+
+{
+  "products": [
+    { "product_id": 6, "quantity_received": 8 }
+  ],
+  "observations": "El proveedor solo trajo 8 de los 10 acordados"
+}
+
+### Paso 3: Verificar historial
+GET {{baseUrl}}/supplier-notes/historial
+Authorization: Bearer {{token}}
+Accept: application/json
+
+
+### ============================================================
+### 🔗 FLUJO: PRODUCTOS CON CODIGOS DE PROVEEDOR
+### ============================================================
+
+### Paso 1: Registrar codigo "5000" para Frijol del proveedor 1
+POST {{baseUrl}}/product-supplier-codes
+Authorization: Bearer {{token}}
+Content-Type: application/json
+
+{
+  "product_id": 7,
+  "supplier_id": 1,
+  "code": "5000"
+}
+
+### Paso 2: Registrar ESE MISMO codigo "5000" para Coca Cola del proveedor 7
+POST {{baseUrl}}/product-supplier-codes
+Authorization: Bearer {{token}}
+Content-Type: application/json
+
+{
+  "product_id": 12,
+  "supplier_id": 7,
+  "code": "5000"
+}
+
+### Paso 3: Ticket proveedor 1 con codigo "5000" -> debe dar Frijol (id: 7)
+POST {{baseUrl}}/products/match
+Authorization: Bearer {{token}}
+Content-Type: application/json
+
+{
+  "supplier_id": 1,
+  "products": [
+    { "nombre": "FRIJOL", "codigo": "5000", "cantidad": 5, "precio_unitario": 26 }
+  ]
+}
+
+### Paso 4: Ticket proveedor 7 con codigo "5000" -> debe dar Coca Cola (id: 12)
+POST {{baseUrl}}/products/match
+Authorization: Bearer {{token}}
+Content-Type: application/json
+
+{
+  "supplier_id": 7,
+  "products": [
+    { "nombre": "COCA", "codigo": "5000", "cantidad": 5, "precio_unitario": 38 }
+  ]
+}
