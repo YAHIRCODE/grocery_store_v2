@@ -26,14 +26,15 @@ abstract class TestCase extends BaseTestCase
 
     protected function seedRoles(): void
     {
-        Role::firstOrCreate(['name' => 'Administrador', 'slug' => 'administrador']);
-        Role::firstOrCreate(['name' => 'Cajero', 'slug' => 'cajero']);
-        Role::firstOrCreate(['name' => 'Almacenista', 'slug' => 'almacenista']);
+    Role::firstOrCreate(['name' => 'Administrador']);
+    Role::firstOrCreate(['name' => 'Cajero']);
+    Role::firstOrCreate(['name' => 'Almacenista']);
+        
     }
 
     protected function createAdmin(): User
     {
-        $role = Role::where('slug', 'administrador')->first();
+$role = Role::where('name', 'Administrador')->first();
 
         $user = User::factory()->create([
             'role_id' => $role->id,
@@ -93,7 +94,7 @@ abstract class TestCase extends BaseTestCase
         return Client::factory()->create($overrides);
     }
 
-    protected function createCashRegister(User $user = null, array $overrides = []): CashRegister
+    protected function createCashRegister(?User $user = null, array $overrides = []): CashRegister
     {
         $employee = $user?->employee ?? $this->adminUser?->employee;
         if (!$employee) {

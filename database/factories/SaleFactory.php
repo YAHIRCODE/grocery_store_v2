@@ -34,7 +34,7 @@ class SaleFactory extends Factory
             'employee_id' => Employee::factory(),
             'client_id' => fake()->optional(0.3)->passthrough(fn () => Client::factory()->create()->id),
             'quantity' => $quantity,
-            'unit_type' => fake()->randomElement(['pieza', 'kg', 'litro', 'caja']),
+'unit_type' => fake()->randomElement(['unit', 'package', 'weight']),
             'unit_price' => $unitPrice,
             'total_price' => $totalPrice,
             'cash_amount' => $cashAmount,

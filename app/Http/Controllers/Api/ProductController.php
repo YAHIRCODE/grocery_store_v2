@@ -55,7 +55,7 @@ class ProductController extends Controller
             $product->saleUnits()->create($unit);
         }
 
-        return response()->json($product->load('saleUnits'));
+return response()->json($product->load('saleUnits'), 201);
     }
 
     /**

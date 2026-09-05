@@ -32,7 +32,7 @@ class EmployeeTest extends TestCase
 
     public function test_store_employee(): void
     {
-        $role = \App\Models\Role::where('slug', 'cajero')->first();
+$role = \App\Models\Role::where('name', 'Cajero')->first();
 
         $payload = [
             'first_name' => 'María',
@@ -82,7 +82,7 @@ class EmployeeTest extends TestCase
     public function test_update_employee(): void
     {
         $employee = Employee::factory()->create();
-        $role = \App\Models\Role::where('slug', 'cajero')->first();
+        $role = \App\Models\Role::where('name', 'Cajero')->first();
 
         $payload = [
             'first_name' => 'Carlos',

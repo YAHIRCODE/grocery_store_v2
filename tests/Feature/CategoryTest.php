@@ -23,9 +23,9 @@ class CategoryTest extends TestCase
             ->getJson('/api/categories');
 
         $response->assertStatus(200)
-            ->assertJsonStructure([
-                '*' => ['id', 'name', 'description'],
-            ]);
+->assertJsonStructure([
+    'data' => ['*' => ['id', 'name', 'description']],
+]);
     }
 
     public function test_store_category(): void
@@ -61,7 +61,7 @@ class CategoryTest extends TestCase
             ->getJson("/api/categories/{$category->id}");
 
         $response->assertStatus(200)
-            ->assertJsonStructure(['message', 'data']);
+->assertJsonStructure(['data' => ['id', 'name', 'description']]);
     }
 
     public function test_update_category(): void

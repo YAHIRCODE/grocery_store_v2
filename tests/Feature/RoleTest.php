@@ -30,7 +30,6 @@ class RoleTest extends TestCase
     {
         $response = $this->postJson('/api/roles', [
             'name' => 'New Role',
-            'slug' => 'new-role',
             'description' => 'A new test role',
         ], $this->authHeaders());
 

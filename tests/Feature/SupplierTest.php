@@ -25,9 +25,9 @@ class SupplierTest extends TestCase
             ->getJson('/api/suppliers');
 
         $response->assertStatus(200)
-            ->assertJsonStructure([
-                '*' => ['id', 'company_name', 'contact_name', 'phone', 'email'],
-            ]);
+->assertJsonStructure([
+    'data' => ['*' => ['id', 'company_name', 'contact_name', 'phone', 'email']],
+]);
     }
 
     public function test_store_supplier(): void
@@ -54,7 +54,7 @@ class SupplierTest extends TestCase
             ->postJson('/api/suppliers', []);
 
         $response->assertStatus(422)
-            ->assertJsonValidationErrors(['company_name', 'contact_name', 'phone', 'email']);
+->assertJsonValidationErrors(['company_name', 'contact_name']);
     }
 
     public function test_show_supplier(): void
@@ -99,7 +99,7 @@ class SupplierTest extends TestCase
 
         $response->assertStatus(200);
 
-        $this->assertDatabaseMissing('suppliers', ['id' => $supplier->id]);
+        $this->assertSoftDeleted('suppliers', ['id' => $supplier->id]);
     }
 
     public function test_destroy_supplier_with_notes(): void

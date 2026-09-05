@@ -12,21 +12,11 @@ class RoleFactory extends Factory
 {
     protected $model = Role::class;
 
-    public function definition(): array
+      public function definition(): array
     {
-        $roles = [
-            ['name' => 'Administrador', 'slug' => 'admin', 'description' => 'Acceso total al sistema'],
-            ['name' => 'Cajero', 'slug' => 'cashier', 'description' => 'Operador de caja'],
-            ['name' => 'Gerente', 'slug' => 'manager', 'description' => 'Gestion de sucursal'],
-            ['name' => 'Almacen', 'slug' => 'warehouse', 'description' => 'Control de inventario'],
-        ];
-
-        $role = fake()->randomElement($roles);
-
         return [
-            'name' => $role['name'],
-            'slug' => $role['slug'],
-            'description' => $role['description'],
+            'name' => 'Rol ' . fake()->unique()->numberBetween(1000, 9999),
+            'description' => fake()->sentence(),
         ];
     }
 
@@ -34,7 +24,6 @@ class RoleFactory extends Factory
     {
         return $this->state(fn () => [
             'name' => 'Administrador',
-            'slug' => 'admin',
         ]);
     }
 
@@ -42,7 +31,6 @@ class RoleFactory extends Factory
     {
         return $this->state(fn () => [
             'name' => 'Cajero',
-            'slug' => 'cashier',
         ]);
     }
 }

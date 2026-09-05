@@ -36,10 +36,14 @@ class AuthController extends Controller
         return response()->json($request->user()->load(['role', 'employee']));
     }
 
-    public function logout(Request $request)
-    {
-        $request->user()->currentAccessToken()->delete();
+public function logout(Request $request)
+{
+    $token = $request->user()->currentAccessToken();
 
-        return response()->json(['message' => 'Sesión cerrada correctamente.']);
+    if ($token && !($token instanceof \Laravel\Sanctum\TransientToken)) {
+        $token->delete();
     }
+
+    return response()->json(['message' => 'Sesión cerrada correctamente.']);
+}
 }

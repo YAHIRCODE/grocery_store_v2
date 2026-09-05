@@ -87,23 +87,28 @@ public function index()
     /**
      * Remove the specified resource from storage.
      */
-    public function destroy(string $id)
-    {
-        $supplier = Supplier::findOrFail($id);
-        
-        
-        // Verificar si el proveedor tiene deudas pendientes
-        if ($supplier->debts()->whereIn('status', ['pending', 'overdue'])->exists()) {
-            return response()->json([
-                'message' => 'No se puede eliminar el proveedor porque tiene deudas pendientes',
-            ], 400);
-        }
-        
-        $supplier->delete();
-        return response()->json([
-            'message' => 'Proveedor eliminado exitosamente',
-            'data' => $supplier
-        ], 200);
+public function destroy(string $id)
+{
+    $supplier = Supplier::findOrFail($id);
 
+    // Verificar si el proveedor tiene notas de trato registradas
+    if ($supplier->supplierNotes()->exists()) {
+        return response()->json([
+            'message' => 'No se puede eliminar el proveedor porque tiene notas de trato registradas',
+        ], 409);
     }
+
+    // Verificar si el proveedor tiene deudas pendientes
+    if ($supplier->debts()->whereIn('status', ['pending', 'overdue'])->exists()) {
+        return response()->json([
+            'message' => 'No se puede eliminar el proveedor porque tiene deudas pendientes',
+        ], 400);
+    }
+
+    $supplier->delete();
+    return response()->json([
+        'message' => 'Proveedor eliminado exitosamente',
+        'data' => $supplier
+    ], 200);
+}
 }
