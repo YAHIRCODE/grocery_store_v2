@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { ShoppingCart, ChevronLeft, ChevronRight, DollarSign, Package, Users } from 'lucide-react';
+import { ShoppingCart, ChevronLeft, ChevronRight, DollarSign, Package } from 'lucide-react';
 import api from '../../services/api';
 
 const fmt = (n) => `$${Number(n || 0).toLocaleString('en-US', { minimumFractionDigits: 2 })}`;
@@ -20,10 +20,10 @@ const PAYMENT_STYLE = {
 
 export default function SalesReport() {
   const [sales, setSales] = useState([]);
-  const [loading, setLoading] = useState(true);
   const [page, setPage] = useState(1);
   const [lastPage, setLastPage] = useState(1);
   const [total, setTotal] = useState(0);
+  const [loading, setLoading] = useState(false);
   const [expanded, setExpanded] = useState(null);
 
   const fetchSales = async (p = 1) => {
@@ -31,8 +31,7 @@ export default function SalesReport() {
     try {
       const res = await api.get(`/dashboard/reportes/ventas?page=${p}`);
       const paginated = res.data?.data;
-      const lines = paginated?.data || [];
-      setSales(lines);
+      setSales(paginated?.data || []);
       setPage(paginated?.current_page || 1);
       setLastPage(paginated?.last_page || 1);
       setTotal(paginated?.total || 0);
@@ -43,7 +42,13 @@ export default function SalesReport() {
     }
   };
 
-  useEffect(() => { fetchSales(1); }, []);
+  useEffect(() => {
+    const timeoutId = setTimeout(() => {
+      void fetchSales(1);
+    }, 0);
+
+    return () => clearTimeout(timeoutId);
+  }, []);
 
   const grouped = sales.reduce((acc, line) => {
     const key = line.sale_group_id;

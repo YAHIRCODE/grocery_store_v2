@@ -21,6 +21,7 @@ export default function PointOfSale() {
   const [submitting, setSubmitting] = useState(false);
   const [saleMessage, setSaleMessage] = useState('');
   const [dueDate, setDueDate] = useState('');
+  const [defaultDue] = useState(() => new Date(Date.now() + 30 * 86400000).toISOString().slice(0, 10));
 
   const [clients, setClients] = useState([]);
   const [clientSearch, setClientSearch] = useState('');
@@ -117,11 +118,6 @@ export default function PointOfSale() {
   const totalItems = cart.reduce((sum, item) => sum + item.qty, 0);
 
   const todayStr = new Date().toISOString().slice(0, 10);
-  const defaultDue = new Date(Date.now() + 30 * 86400000).toISOString().slice(0, 10);
-
-  useEffect(() => {
-    if (paymentMethod === 'credit' && !dueDate) setDueDate(defaultDue);
-  }, [paymentMethod]);
 
   const handleFinalizeSale = async () => {
     if (cart.length === 0) return;
@@ -379,7 +375,7 @@ export default function PointOfSale() {
                     <input
                       type="date"
                       className="w-full bg-surface border border-border rounded pl-7 pr-2 py-1.5 text-sm font-mono text-white focus:outline-none focus:border-accent"
-                      value={dueDate}
+                      value={dueDate || defaultDue}
                       onChange={(e) => setDueDate(e.target.value)}
                       min={todayStr}
                     />

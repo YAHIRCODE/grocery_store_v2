@@ -30,7 +30,10 @@ export default function ClientDebts() {
     }
   };
 
-  useEffect(() => { fetchDebts(); }, []);
+  useEffect(() => {
+    async function load() { await fetchDebts(); }
+    load();
+  }, []);
 
   const filtered = debts.filter((d) => {
     const matchFilter = filter === 'all' || d.status === filter;

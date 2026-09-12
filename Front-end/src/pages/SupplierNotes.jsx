@@ -1,5 +1,5 @@
-import { useState, useEffect } from 'react';
-import { Printer, CheckCircle, Check, AlertTriangle, Upload, X, Plus, Trash2, Search } from 'lucide-react';
+import { useState, useEffect, useCallback } from 'react';
+import { CheckCircle, Check, AlertTriangle, Upload, X, Plus, Trash2, Search } from 'lucide-react';
 import api from '../services/api';
 
 const STATUS_CONFIG = {
@@ -25,27 +25,11 @@ export default function SupplierNotes() {
   const [observations, setObservations] = useState('');
   const [confirming, setConfirming] = useState(false);
   const [showForm, setShowForm] = useState(false);
+  const [scanning, setScanning] = useState(false);
+  const [scanResult, setScanResult] = useState(null);
+  const [scanError, setScanError] = useState('');
 
-  const fetchNotes = async (status) => {
-    setLoading(true);
-    try {
-      const params = status && status !== 'all' ? `?status=${status}` : '';
-      const res = await api.get(`/supplier-notes${params}`);
-      const list = res.data?.data || [];
-      setNotes(list);
-      if (list.length > 0 && !selectedNote) {
-        selectNote(list[0]);
-      }
-    } catch {
-      setNotes([]);
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  useEffect(() => { fetchNotes(activeTab); }, [activeTab]);
-
-  const selectNote = (note) => {
+  const selectNote = useCallback((note) => {
     setSelectedNote(note);
     const qtys = {};
     (note.details || []).forEach((d) => {
@@ -53,7 +37,29 @@ export default function SupplierNotes() {
     });
     setReceivedQtys(qtys);
     setObservations(note.observations || '');
-  };
+  }, []);
+
+  const fetchNotes = useCallback(async (status) => {
+    setLoading(true);
+    try {
+      const params = status && status !== 'all' ? `?status=${status}` : '';
+      const res = await api.get(`/supplier-notes${params}`);
+      const list = res.data?.data || [];
+      setNotes(list);
+      if (list.length > 0) {
+        selectNote(list[0]);
+      }
+    } catch {
+      setNotes([]);
+    } finally {
+      setLoading(false);
+    }
+  }, [selectNote]);
+
+  useEffect(() => {
+    async function load() { await fetchNotes(activeTab); }
+    load();
+  }, [activeTab, fetchNotes]);
 
   const handleQtyChange = (productId, value) => {
     setReceivedQtys((prev) => ({ ...prev, [productId]: parseInt(value) || 0 }));
@@ -77,6 +83,44 @@ export default function SupplierNotes() {
     } finally {
       setConfirming(false);
     }
+  };
+
+  const handleImageUpload = async (file) => {
+    if (!selectedNote || !file) return;
+
+    setScanning(true);
+    setScanError('');
+    setScanResult(null);
+
+    const formData = new FormData();
+    formData.append('image', file);
+
+    try {
+      const res = await api.post(`/supplier-notes/${selectedNote.id}/scan`, formData, {
+        headers: { 'Content-Type': 'multipart/form-data' },
+      });
+      setScanResult(res.data.products || []);
+    } catch (err) {
+      setScanError(err.response?.data?.message || 'Error al procesar el ticket');
+    } finally {
+      setScanning(false);
+    }
+  };
+
+  const applyScanToTable = () => {
+    if (!scanResult) return;
+
+    const newQtys = { ...receivedQtys };
+    scanResult.forEach((item) => {
+      const detail = (selectedNote.details || []).find(
+        (d) => d.product?.name?.toLowerCase().trim() === item.nombre?.toLowerCase().trim()
+      );
+      if (detail) {
+        newQtys[detail.product_id] = item.cantidad || 0;
+      }
+    });
+    setReceivedQtys(newQtys);
+    setScanResult(null);
   };
 
   return (
@@ -227,11 +271,75 @@ export default function SupplierNotes() {
                 <div className="grid grid-cols-2 gap-4 shrink-0">
                   <div className="bg-surface rounded-lg border border-border p-4 flex flex-col">
                     <h3 className="text-[12px] leading-[16px] tracking-widest uppercase font-bold text-text-secondary mb-3">Ticket Físico</h3>
-                    <div className="flex-1 border-2 border-dashed border-border rounded-lg bg-bg flex flex-col items-center justify-center p-4 hover:border-accent/50 hover:bg-accent/5 transition-colors cursor-pointer group">
-                      <Upload size={32} className="text-text-secondary mb-2 group-hover:text-accent transition-colors" />
-                      <p className="text-sm text-text-secondary text-center">Arrastra y suelta el ticket escaneado, o haz clic para subir</p>
-                      <p className="font-mono text-[11px] text-text-secondary/50 mt-1">PDF, JPG, PNG (Máx 5MB)</p>
-                    </div>
+
+                    <input
+                      type="file"
+                      id="ticket-upload"
+                      accept="image/jpeg,image/png,image/webp"
+                      capture="environment"
+                      className="hidden"
+                      onChange={(e) => {
+                        const file = e.target.files?.[0];
+                        if (file) handleImageUpload(file);
+                        e.target.value = '';
+                      }}
+                    />
+
+                    {!scanning && !scanResult && !scanError && (
+                      <label
+                        htmlFor="ticket-upload"
+                        className="flex-1 border-2 border-dashed border-border rounded-lg bg-bg flex flex-col items-center justify-center p-4 hover:border-accent/50 hover:bg-accent/5 transition-colors cursor-pointer group"
+                      >
+                        <Upload size={32} className="text-text-secondary mb-2 group-hover:text-accent transition-colors" />
+                        <p className="text-sm text-text-secondary text-center">Arrastra y suelta el ticket escaneado, o haz clic para subir</p>
+                        <p className="font-mono text-[11px] text-text-secondary/50 mt-1">JPG, PNG, WEBP (Máx 10MB)</p>
+                      </label>
+                    )}
+
+                    {scanning && (
+                      <div className="flex-1 flex flex-col items-center justify-center p-4 text-text-secondary">
+                        <div className="animate-spin h-8 w-8 border-2 border-accent border-t-transparent rounded-full mb-2" />
+                        <p className="text-sm">Analizando ticket...</p>
+                      </div>
+                    )}
+
+                    {scanError && (
+                      <div className="flex-1 flex flex-col items-center justify-center p-4 gap-2">
+                        <AlertTriangle size={24} className="text-error" />
+                        <p className="text-sm text-error text-center">{scanError}</p>
+                        <label htmlFor="ticket-upload" className="text-xs text-accent hover:underline cursor-pointer">
+                          Intentar de nuevo
+                        </label>
+                      </div>
+                    )}
+
+                    {scanResult && (
+                      <div className="flex-1 flex flex-col gap-2 overflow-y-auto">
+                        <p className="text-xs text-text-secondary mb-1">{scanResult.length} productos detectados:</p>
+                        {scanResult.map((item, i) => (
+                          <div key={i} className="text-xs bg-bg border border-border rounded px-2 py-1 flex justify-between">
+                            <span className="text-white truncate">{item.nombre}</span>
+                            <span className="text-accent font-mono">{item.cantidad}</span>
+                          </div>
+                        ))}
+                        <div className="flex gap-2 mt-2">
+                          <button
+                            type="button"
+                            onClick={applyScanToTable}
+                            className="flex-1 bg-accent text-bg text-xs font-bold uppercase px-3 py-1.5 rounded hover:opacity-90"
+                          >
+                            Aplicar a la tabla
+                          </button>
+                          <button
+                            type="button"
+                            onClick={() => setScanResult(null)}
+                            className="text-xs text-text-secondary hover:text-white px-3 py-1.5"
+                          >
+                            Descartar
+                          </button>
+                        </div>
+                      </div>
+                    )}
                   </div>
 
                   <div className="bg-surface rounded-lg border border-border p-4 flex flex-col">

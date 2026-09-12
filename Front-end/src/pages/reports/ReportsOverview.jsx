@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { Calendar, FileText, Table, FileSpreadsheet, Download, TrendingUp, Star, AlertTriangle } from 'lucide-react';
+import { FileText, Table, FileSpreadsheet, Download, TrendingUp, Star, AlertTriangle } from 'lucide-react';
 import api from '../../services/api';
 
 const fmt = (n) => `$${Number(n || 0).toLocaleString('en-US', { minimumFractionDigits: 2 })}`;

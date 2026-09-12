@@ -7,7 +7,7 @@ const fmt = (n) => `$${Number(n || 0).toLocaleString('en-US', { minimumFractionD
 export default function SuppliersList() {
   const [suppliers, setSuppliers] = useState([]);
   const [loading, setLoading] = useState(true);
-  const [search, setSearch] = useState('');
+  const [search] = useState('');
   const [showForm, setShowForm] = useState(false);
   const [editingSupplier, setEditingSupplier] = useState(null);
 
@@ -23,7 +23,10 @@ export default function SuppliersList() {
     }
   };
 
-  useEffect(() => { fetchSuppliers(); }, []);
+  useEffect(() => {
+    async function load() { await fetchSuppliers(); }
+    load();
+  }, []);
 
   const filtered = suppliers.filter((s) =>
     s.company_name?.toLowerCase().includes(search.toLowerCase()) ||
@@ -31,16 +34,6 @@ export default function SuppliersList() {
   );
 
   const totalDebt = suppliers.reduce((s, sup) => s + (sup.debts_sum_amount || 0), 0);
-
-  const handleDelete = async (id) => {
-    if (!confirm('¿Eliminar este proveedor?')) return;
-    try {
-      await api.delete(`/suppliers/${id}`);
-      fetchSuppliers();
-    } catch {
-      // silently fail
-    }
-  };
 
   if (loading) {
     return (

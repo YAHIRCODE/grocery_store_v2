@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { AlertTriangle, Clock, CheckCircle, DollarSign } from 'lucide-react';
+import { AlertTriangle, Clock, DollarSign } from 'lucide-react';
 import api from '../../services/api';
 
 const fmt = (n) => `$${Number(n || 0).toLocaleString('en-US', { minimumFractionDigits: 2 })}`;

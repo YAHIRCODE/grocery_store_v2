@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { UserPlus, Badge, Filter, Download, ChevronLeft, ChevronRight, X } from 'lucide-react';
+import { UserPlus, Badge, ChevronLeft, ChevronRight, X } from 'lucide-react';
 import api from '../../services/api';
 
 export default function Employees() {
@@ -27,7 +27,10 @@ export default function Employees() {
     }
   };
 
-  useEffect(() => { fetchData(); }, []);
+  useEffect(() => {
+    async function load() { await fetchData(); }
+    load();
+  }, []);
 
   const totalPages = Math.ceil(employees.length / perPage);
   const paged = employees.slice((page - 1) * perPage, page * perPage);
@@ -144,6 +147,7 @@ function EmployeeForm({ employee, roles, onClose, onSaved }) {
     role_id: employee?.user?.role?.id || employee?.role_id || '',
   });
   const [saving, setSaving] = useState(false);
+  const [tempPassword, setTempPassword] = useState('');
 
   const handleChange = (field, value) => setForm((prev) => ({ ...prev, [field]: value }));
 
@@ -158,16 +162,76 @@ function EmployeeForm({ employee, roles, onClose, onSaved }) {
       };
       if (employee) {
         await api.put(`/employees/${employee.id}`, body);
+        onSaved();
       } else {
-        await api.post('/employees', body);
+        const res = await api.post('/employees', body);
+        if (res.data?.temporary_password) {
+          setTempPassword(res.data.temporary_password);
+        } else {
+          onSaved();
+        }
       }
-      onSaved();
     } catch {
       // silently fail
     } finally {
       setSaving(false);
     }
   };
+
+  const fullName = `${form.first_name} ${form.last_name}`.trim();
+
+  const copyPassword = () => {
+    navigator.clipboard.writeText(tempPassword);
+  };
+
+  if (tempPassword) {
+    return (
+      <div className="fixed inset-0 z-50 overflow-hidden">
+        <div className="absolute inset-0 bg-black/60 backdrop-blur-sm" onClick={onClose} />
+        <div className="absolute inset-y-0 right-0 w-full max-w-lg bg-surface border-l border-border shadow-xl flex flex-col">
+          <div className="p-6 border-b border-border flex justify-between items-center">
+            <h2 className="text-[24px] leading-[32px] font-semibold text-white">Empleado Creado</h2>
+          </div>
+          <div className="flex-1 overflow-y-auto p-6 flex flex-col gap-4">
+            <div className="text-center py-4">
+              <div className="w-16 h-16 rounded-full bg-accent/20 border border-accent/30 flex items-center justify-center mx-auto mb-4 font-bold text-2xl text-accent">
+                {fullName.charAt(0).toUpperCase()}
+              </div>
+              <h3 className="text-white text-lg font-semibold">{fullName}</h3>
+              <p className="text-text-secondary text-sm mt-1">Se ha generado una contraseña temporal</p>
+            </div>
+            <div className="bg-bg border border-border rounded p-4">
+              <label className="block text-[12px] tracking-widest uppercase font-bold text-text-secondary mb-2">Contraseña Temporal</label>
+              <div className="flex gap-2">
+                <input
+                  className="flex-1 bg-surface border border-border rounded px-4 py-2.5 text-sm text-white font-mono focus:border-accent outline-none"
+                  type="text"
+                  value={tempPassword}
+                  readOnly
+                />
+                <button
+                  type="button"
+                  onClick={copyPassword}
+                  className="px-4 py-2.5 bg-accent text-bg font-semibold rounded hover:opacity-90 transition-colors whitespace-nowrap"
+                >
+                  Copiar
+                </button>
+              </div>
+              <p className="text-text-secondary text-[11px] mt-2">Guarda esta contraseña. No se volverá a mostrar.</p>
+            </div>
+            <div className="flex gap-3 mt-4">
+              <button
+                onClick={() => { onSaved(); setTempPassword(''); }}
+                className="flex-1 py-2.5 bg-accent text-bg font-semibold rounded hover:opacity-90 transition-colors"
+              >
+                Entendido, cerrar
+              </button>
+            </div>
+          </div>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="fixed inset-0 z-50 overflow-hidden">

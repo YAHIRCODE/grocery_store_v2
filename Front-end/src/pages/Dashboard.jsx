@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
-import { Receipt, Banknote, AlertTriangle, TrendingUp, ArrowUp, AlertCircle } from 'lucide-react';
-import { useAuth } from '../context/AuthContext';
+import { Receipt, Banknote, AlertTriangle, TrendingUp, ArrowUp, AlertCircle, DollarSign } from 'lucide-react';
+import { useAuth } from '../context/useAuth';
 import api from '../services/api';
 
 const fmt = (n) => `$${Number(n || 0).toLocaleString('en-US', { minimumFractionDigits: 2 })}`;
@@ -46,9 +46,14 @@ export default function Dashboard() {
   const ticketsSold = data.ventasHoy || 0;
   const ganancias = data.gananciasData || [];
   const gastos = data.gastosData || [];
-  const totalGanancia = ganancias.reduce((s, v) => s + v, 0);
+  const totalIngresosSemana = ganancias.reduce((s, v) => s + v, 0);
   const totalGasto = gastos.reduce((s, v) => s + v, 0);
-  const margin = totalRevenue > 0 ? Math.round((totalGanancia / totalRevenue) * 100) : 0;
+  const totalGananciaSemana = totalIngresosSemana - totalGasto;
+  const margin = totalIngresosSemana > 0 ? Math.round((totalGananciaSemana / totalIngresosSemana) * 100) : 0;
+  
+  const totalCost = data.costoVentasHoy || 0;
+  const grossProfit = totalRevenue - totalCost;
+  const grossMargin = totalRevenue > 0 ? Math.round((grossProfit / totalRevenue) * 100) : 0;
 
   return (
     <div className="space-y-6">
@@ -59,7 +64,7 @@ export default function Dashboard() {
         <p className="text-sm text-text-secondary mt-1">Resumen general de Abarrotes Katy.</p>
       </div>
 
-      <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-4 gap-4">
+      <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-5 gap-4">
         <div className="bg-surface border border-border rounded-lg p-4 flex flex-col justify-between hover:border-accent transition-colors duration-300">
           <div className="flex justify-between items-start mb-3">
             <span className="text-[12px] leading-[16px] tracking-widest uppercase font-bold text-text-secondary">Tickets Hoy</span>
@@ -82,6 +87,22 @@ export default function Dashboard() {
           </div>
           <div>
             <div className="font-mono text-[28px] font-bold text-white leading-tight mb-1">{fmt(totalRevenue)}</div>
+          </div>
+        </div>
+
+        <div className="bg-surface border border-border rounded-lg p-4 flex flex-col justify-between hover:border-accent transition-colors duration-300">
+          <div className="flex justify-between items-start mb-3">
+            <span className="text-[12px] leading-[16px] tracking-widest uppercase font-bold text-text-secondary">Ganancia Bruta (Ventas)</span>
+            <DollarSign size={16} className="text-text-secondary" />
+          </div>
+          <div>
+            <div className="font-mono text-[28px] font-bold text-white leading-tight mb-1">{fmt(grossProfit)}</div>
+            <div className="flex items-center gap-1 text-xs">
+              <span className="text-accent bg-accent/10 border border-accent px-1 rounded flex items-center font-mono">
+                {grossMargin}%
+              </span>
+              <span className="text-text-secondary">margen bruto</span>
+            </div>
           </div>
         </div>
 
@@ -108,12 +129,12 @@ export default function Dashboard() {
             <TrendingUp size={16} className="text-text-secondary" />
           </div>
           <div>
-            <div className="font-mono text-[28px] font-bold text-white leading-tight mb-1">{fmt(totalGanancia)}</div>
+            <div className="font-mono text-[28px] font-bold text-white leading-tight mb-1">{fmt(totalGananciaSemana)}</div>
             <div className="flex items-center gap-1 text-xs">
               <span className="text-accent bg-accent/10 border border-accent px-1 rounded flex items-center font-mono">
                 {margin}%
               </span>
-              <span className="text-text-secondary">margen</span>
+              <span className="text-text-secondary">margen neto</span>
             </div>
           </div>
         </div>
@@ -159,30 +180,51 @@ export default function Dashboard() {
 
         <div className="bg-surface border border-border rounded-lg p-4 flex flex-col">
           <div className="flex justify-between items-center mb-4 pb-3 border-b border-border">
-            <h2 className="text-[20px] leading-[28px] font-semibold text-white">Margen de Ganancia</h2>
+            <h2 className="text-[20px] leading-[28px] font-semibold text-white">Desglose de Ganancias</h2>
           </div>
           <div className="flex-1 flex flex-col justify-center items-center relative">
             <div className="w-40 h-40 rounded-full border-[12px] border-border relative">
               <div className="absolute inset-[-12px] rounded-full border-[12px] border-transparent border-t-accent border-r-accent rotate-45" />
               <div className="absolute inset-0 flex flex-col items-center justify-center">
-                <span className="font-mono text-2xl font-bold text-white">{margin}%</span>
-                <span className="text-xs text-text-secondary font-bold tracking-widest uppercase">Margen</span>
+                <span className="font-mono text-2xl font-bold text-white">{grossMargin}%</span>
+                <span className="text-xs text-text-secondary font-bold tracking-widest uppercase">Margen Bruto</span>
               </div>
             </div>
             <div className="w-full mt-6 space-y-2">
               <div className="flex justify-between items-center text-sm">
                 <div className="flex items-center gap-2">
                   <div className="w-3 h-3 rounded-sm bg-accent" />
-                  <span className="text-white">Ganancia Neta</span>
+                  <span className="text-white">Ingresos</span>
                 </div>
-                <span className="font-mono">{fmt(totalGanancia)}</span>
+                <span className="font-mono">{fmt(totalRevenue)}</span>
               </div>
               <div className="flex justify-between items-center text-sm">
                 <div className="flex items-center gap-2">
                   <div className="w-3 h-3 rounded-sm bg-border" />
-                  <span className="text-text-secondary">Gastos</span>
+                  <span className="text-text-secondary">Costo Ventas</span>
+                </div>
+                <span className="font-mono text-text-secondary">{fmt(totalCost)}</span>
+              </div>
+              <div className="flex justify-between items-center text-sm border-t border-border/50 pt-2">
+                <div className="flex items-center gap-2">
+                  <div className="w-3 h-3 rounded-sm bg-accent/50" />
+                  <span className="text-white font-semibold">Ganancia Bruta</span>
+                </div>
+                <span className="font-mono text-accent">{fmt(grossProfit)}</span>
+              </div>
+              <div className="flex justify-between items-center text-sm">
+                <div className="flex items-center gap-2">
+                  <div className="w-3 h-3 rounded-sm bg-error/50" />
+                  <span className="text-text-secondary">Gastos Operativos</span>
                 </div>
                 <span className="font-mono text-text-secondary">{fmt(totalGasto)}</span>
+              </div>
+              <div className="flex justify-between items-center text-sm border-t border-border/50 pt-2">
+                <div className="flex items-center gap-2">
+                  <div className="w-3 h-3 rounded-sm bg-accent" />
+                  <span className="text-white font-semibold">Ganancia Neta</span>
+                </div>
+                <span className="font-mono text-accent">{fmt(totalGananciaSemana)}</span>
               </div>
             </div>
           </div>

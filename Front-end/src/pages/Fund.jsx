@@ -1,12 +1,6 @@
 import { useState, useEffect } from 'react';
-import { Download, Plus, CheckCircle, TrendingUp, Pencil, Shield, Filter, MoreVertical, ArrowDownRight, ArrowUpRight, X } from 'lucide-react';
+import { Download, Plus, CheckCircle, Shield, X } from 'lucide-react';
 import api from '../services/api';
-
-const fmt = (n) => {
-  const abs = Math.abs(n || 0);
-  const formatted = `$${abs.toLocaleString('en-US', { minimumFractionDigits: 2 })}`;
-  return n < 0 ? `-${formatted}` : `+${formatted}`;
-};
 
 export default function Fund() {
   const [fund, setFund] = useState(null);
@@ -33,7 +27,10 @@ export default function Fund() {
     }
   };
 
-  useEffect(() => { fetchFund(); }, []);
+  useEffect(() => {
+    async function load() { await fetchFund(); }
+    load();
+  }, []);
 
   const handleExtract = async () => {
     if (!fund || !extractAmount) return;
@@ -51,16 +48,6 @@ export default function Fund() {
       // silently fail
     } finally {
       setExtracting(false);
-    }
-  };
-
-  const handleUpdateLimit = async (field, value) => {
-    if (!fund) return;
-    try {
-      await api.put(`/provider-funds/${fund.id}`, { [field]: parseFloat(value) || 0 });
-      fetchFund();
-    } catch {
-      // silently fail
     }
   };
 

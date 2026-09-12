@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { Package, AlertTriangle, TrendingDown, Search } from 'lucide-react';
+import { Package, TrendingDown, Search } from 'lucide-react';
 import api from '../../services/api';
 
 const fmt = (n) => `$${Number(n || 0).toLocaleString('en-US', { minimumFractionDigits: 2 })}`;
@@ -108,7 +108,6 @@ export default function ProductsReport() {
             filtered.map((p) => {
               const isOut = p.stock === 0;
               const isLow = p.stock > 0 && p.stock <= p.min_stock;
-              const margin = p.purchase_price > 0 ? ((p.price - p.purchase_price) / p.purchase_price * 100).toFixed(1) : 0;
               return (
                 <div
                   key={p.id}

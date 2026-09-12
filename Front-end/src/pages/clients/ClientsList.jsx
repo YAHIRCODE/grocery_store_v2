@@ -1,7 +1,7 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import {
-  Landmark, AlertTriangle, Users, TrendingUp, AlertCircle,
-  Filter, Plus, MoreVertical, ChevronLeft, ChevronRight, CreditCard, Pencil,
+  Landmark, AlertTriangle, Users, AlertCircle,
+  Plus, MoreVertical, Pencil,
   X,
 } from 'lucide-react';
 import api from '../../services/api';
@@ -15,7 +15,7 @@ const STATUS = {
 const fmt = (n) => `$${Number(n || 0).toLocaleString('en-US', { minimumFractionDigits: 2 })}`;
 
 const getClientStatus = (client) => {
-  const outstanding = client.outstanding_debt || 0;
+  const outstanding = client.current_debt || 0;
   if (outstanding > 0) return 'overdue';
   return 'good';
 };
@@ -24,25 +24,28 @@ export default function ClientsList() {
   const [clients, setClients] = useState([]);
   const [loading, setLoading] = useState(true);
   const [selected, setSelected] = useState(null);
-  const [search, setSearch] = useState('');
+  const [search] = useState('');
   const [showForm, setShowForm] = useState(false);
   const [editingClient, setEditingClient] = useState(null);
 
-  const fetchClients = async () => {
+  const fetchClients = useCallback(async () => {
     setLoading(true);
     try {
       const res = await api.get('/clients');
       const list = res.data?.data || [];
       setClients(list);
-      if (list.length > 0 && !selected) setSelected(list[0]);
+      if (list.length > 0) setSelected(list[0]);
     } catch {
       setClients([]);
     } finally {
       setLoading(false);
     }
-  };
+  }, []);
 
-  useEffect(() => { fetchClients(); }, []);
+  useEffect(() => {
+    async function load() { await fetchClients(); }
+    load();
+  }, [fetchClients]);
 
   const filtered = clients.filter((c) => {
     const fullName = `${c.first_name || ''} ${c.last_name || ''}`.toLowerCase();
@@ -51,7 +54,7 @@ export default function ClientsList() {
   });
 
   const totalCredit = clients.reduce((s, c) => s + (c.credit_limit || 0), 0);
-  const totalOutstanding = clients.reduce((s, c) => s + (c.outstanding_debt || 0), 0);
+  const totalOutstanding = clients.reduce((s, c) => s + (c.current_debt || 0), 0);
   const overdueCount = clients.filter((c) => getClientStatus(c) === 'overdue').length;
 
   const handleDelete = async (id) => {
@@ -159,7 +162,7 @@ export default function ClientsList() {
                           </span>
                         </td>
                         <td className="p-3 text-right font-mono">{fmt(c.credit_limit)}</td>
-                        <td className={`p-3 text-right font-mono ${(c.outstanding_debt || 0) > 0 ? 'text-error' : 'text-white'}`}>{fmt(c.outstanding_debt)}</td>
+                        <td className={`p-3 text-right font-mono ${(c.current_debt || 0) > 0 ? 'text-error' : 'text-white'}`}>{fmt(c.current_debt)}</td>
                         <td className="p-3 text-center text-text-secondary">
                           <button onClick={(e) => { e.stopPropagation(); handleDelete(c.id); }} className="hover:text-error transition-colors"><MoreVertical size={18} /></button>
                         </td>
@@ -196,7 +199,7 @@ export default function ClientsList() {
                 </div>
                 <div className="bg-bg p-3 rounded border border-border">
                   <p className="text-[12px] leading-[16px] tracking-widest uppercase font-bold text-text-secondary mb-1">Saldo Pendiente</p>
-                  <p className="text-[20px] leading-[28px] font-semibold text-accent font-mono">{fmt(selected.outstanding_debt)}</p>
+                  <p className="text-[20px] leading-[28px] font-semibold text-accent font-mono">{fmt(selected.current_debt)}</p>
                 </div>
               </div>
 

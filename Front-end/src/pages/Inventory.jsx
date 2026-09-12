@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { Search, Tags, Download, Plus, ChevronDown, Pencil, Trash2, ChevronLeft, ChevronRight, X } from 'lucide-react';
+import { Tags, Download, Plus, ChevronDown, Pencil, Trash2, ChevronLeft, ChevronRight, X } from 'lucide-react';
 import api from '../services/api';
 
 const fmt = (n) => `$${Number(n || 0).toLocaleString('en-US', { minimumFractionDigits: 2 })}`;
@@ -47,7 +47,10 @@ export default function Inventory() {
     }
   };
 
-  useEffect(() => { fetchData(); }, []);
+  useEffect(() => {
+    async function load() { await fetchData(); }
+    load();
+  }, []);
 
   const filtered = products.filter((p) => {
     if (categoryFilter !== 'all' && p.category?.name !== categoryFilter) return false;
