@@ -11,6 +11,7 @@ use App\Models\ClientDebt;
 use App\Models\Category;
 use App\Models\SupplierDebt;
 use Carbon\Carbon;
+use Illuminate\Support\Facades\DB;
 
 class DashboardController extends Controller
 {
@@ -29,6 +30,12 @@ class DashboardController extends Controller
         $ventasHoyTotal = Sale::whereDate('created_at', Carbon::today())
             ->where('status', 'completed')
             ->sum('total_price');
+
+        $costoVentasHoy = Sale::where('sales.status', 'completed')
+            ->whereDate('sales.created_at', Carbon::today())
+            ->join('products', 'sales.product_id', '=', 'products.id')
+            ->selectRaw('SUM(products.purchase_price * sales.quantity) as total')
+            ->value('total') ?? 0;
 
         $productosConBajoStock = Product::whereColumn('stock', '<=', 'min_stock')->count();
         $deudasPendientes = ClientDebt::whereIn('status', ['pending', 'overdue'])->sum('balance_due');
@@ -133,6 +140,7 @@ class DashboardController extends Controller
             'message' => 'Dashboard',
             'ventasHoy' => $ventasHoy,
             'ventasHoyTotal' => (float) $ventasHoyTotal,
+            'costoVentasHoy' => (float) $costoVentasHoy,
             'productosConBajoStock' => $productosConBajoStock,
             'deudasPendientes' => (float) $deudasPendientes,
             'clientesActivos' => $clientesActivos,
@@ -148,18 +156,40 @@ class DashboardController extends Controller
         ]);
     }
 
-    public function reporteVentas()
-    {
-        $ventas = Sale::with(['product', 'employee', 'client'])
-            ->where('status', 'completed')
-            ->orderBy('created_at', 'desc')
-            ->paginate(20);
+public function reporteVentas()
+{
 
-        return response()->json([
-            'message' => 'Reporte de ventas',
-            'data' => $ventas
-        ], 200);
-    }
+    $perPage = 20;
+
+    $gruposIds = Sale::where('status', 'completed')
+        ->select('sale_group_id', DB::raw('MAX(created_at) as ultima_fecha'))
+        ->groupBy('sale_group_id')
+        ->orderByDesc('ultima_fecha')
+        ->paginate($perPage);
+
+    $ids = collect($gruposIds->items())->pluck('sale_group_id');
+
+    $ventas = Sale::with(['product', 'employee', 'client'])
+        ->where('status', 'completed')
+        ->whereIn('sale_group_id', $ids)
+        ->orderBy('created_at', 'desc')
+        ->get();
+
+    // Reconstruimos un paginador manualmente para conservar current_page,
+    // last_page y total (ahora en TICKETS, no en líneas), que el frontend ya espera.
+    $paginado = new \Illuminate\Pagination\LengthAwarePaginator(
+        $ventas,
+        $gruposIds->total(),
+        $perPage,
+        $gruposIds->currentPage(),
+        ['path' => request()->url(), 'query' => request()->query()]
+    );
+
+    return response()->json([
+        'message' => 'Reporte de ventas',
+        'data' => $paginado
+    ], 200);
+}
 
     public function reporteProductos()
     {

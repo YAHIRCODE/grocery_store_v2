@@ -231,81 +231,147 @@ public function store(Request $request)
             ]);
         }
     }
-    public function scan(Request $request)
-    {
-        $request->validate([
-            'image' => 'required|image|mimes:jpg,jpeg,png,webp|max:10240',
-        ]);
-
-        try {
-            $image = $request->file('image');
-            $imageData = base64_encode(file_get_contents($image->getRealPath()));
-            $mimeType = $image->getMimeType();
-
-            $apiKey = config('services.anthropic.key');
-            $response = Http::withHeaders([
-                'x-api-key' => $apiKey,
-                'anthropic-version' => '2023-06-01',
-            ])->post("https://api.anthropic.com/v1/messages", [
 
 
-                // aquí va el body
-
-                'model' => 'claude-sonnet-4-6',
-                'max_tokens' => 1024,
-                'messages' => [
+    
+private function scanConClaude(string $imageData, string $mimeType): ?string
+{
+    $apiKey = config('services.anthropic.key');
+    $response = Http::withHeaders([
+        'x-api-key' => $apiKey,
+        'anthropic-version' => '2023-06-01',
+    ])->post("https://api.anthropic.com/v1/messages", [
+        'model' => 'claude-sonnet-4-6',
+        'max_tokens' => 1024,
+        'messages' => [
+            [
+                'role' => 'user',
+                'content' => [
                     [
-                        'role' => 'user',
-                        'content' => [
-                            [
-                                'type' => 'image',
-                                'source' => [
-                                    'type' => 'base64',
-                                    'media_type' => $mimeType,
-                                    'data' => $imageData,
-                                ]
-                            ],
-                            [
-                                'type' => 'text',
-'text' => 'Analiza este ticket de proveedor y extrae todos los productos. '
-    . 'Para cada producto busca si tiene un código o clave impresa junto al nombre '
-    . '(usualmente un número de varios dígitos que aparece antes o junto a la descripción '
-    . 'del producto, distinto del precio). Devuelve SOLO un array JSON con los campos: '
-    . 'nombre, codigo (o null si no detectas ninguno), cantidad, precio_unitario. '
-    . 'Sin texto adicional, sin markdown, solo el JSON.'
-                            ]
+                        'type' => 'image',
+                        'source' => [
+                            'type' => 'base64',
+                            'media_type' => $mimeType,
+                            'data' => $imageData,
                         ]
+                    ],
+                    [
+                        'type' => 'text',
+                        'text' => 'Analiza este ticket de proveedor y extrae todos los productos. '
+                            . 'Para cada producto busca si tiene un código o clave impresa junto al nombre '
+                            . '(usualmente un número de varios dígitos que aparece antes o junto a la descripción '
+                            . 'del producto, distinto del precio). Devuelve SOLO un array JSON con los campos: '
+                            . 'nombre, codigo (o null si no detectas ninguno), cantidad, precio_unitario. '
+                            . 'Sin texto adicional, sin markdown, solo el JSON.'
                     ]
                 ]
+            ]
+        ]
+    ]);
+
+    Log::info('Respuesta Claude:', ['status' => $response->status(), 'body' => $response->json()]);
+
+    return $response->json('content.0.text');
+}
+
+private function scanConGroq(string $imageData, string $mimeType): ?string
+{
+    $apiKey = config('services.groq.key');
+
+    $response = Http::withHeaders([
+        'Authorization' => 'Bearer ' . $apiKey,
+        'Content-Type' => 'application/json',
+    ])->post('https://api.groq.com/openai/v1/chat/completions', [
+        'model' => 'qwen/qwen3.8-27b',
+        'messages' => [
+            [
+                'role' => 'user',
+                'content' => [
+                    [
+                        'type' => 'text',
+                        'text' => 'Analiza este ticket de proveedor y extrae todos los productos. '
+                            . 'Para cada producto busca si tiene un código o clave impresa junto al nombre. '
+                            . 'Devuelve SOLO un array JSON con los campos: nombre, codigo (o null), '
+                            . 'cantidad, precio_unitario. Sin texto adicional, sin markdown, solo el JSON.',
+                    ],
+                    [
+                        'type' => 'image_url',
+                        'image_url' => [
+                            'url' => "data:{$mimeType};base64,{$imageData}",
+                        ],
+                    ],
+                ],
+            ],
+        ],
+        'temperature' => 0.3,
+        'max_completion_tokens' => 2048,
+    ]);
+
+    Log::info('Respuesta Groq:', ['status' => $response->status(), 'body' => $response->json()]);
+
+    return $response->json('choices.0.message.content');
+}
+
+private function limpiarJson(?string $text): string
+{
+    $clean = preg_replace('/```json\s*/i', '', $text ?? '');
+    $clean = preg_replace('/```\s*/i', '', $clean);
+    return trim($clean);
+}
+
+public function scan(Request $request)
+{
+    $request->validate([
+        'image' => 'required|image|mimes:jpg,jpeg,png,webp|max:10240',
+    ]);
+
+    try {
+        $image = $request->file('image');
+        $imageData = base64_encode(file_get_contents($image->getRealPath()));
+        $mimeType = $image->getMimeType();
+
+        // Intento 1: Claude
+        $text = $this->scanConClaude($imageData, $mimeType);
+        $clean = $this->limpiarJson($text);
+        $products = json_decode($clean, true);
+        $proveedor = 'Claude';
+
+        // Intento 2: si Claude falló o devolvió JSON inválido, usar Groq
+        if (empty($text) || json_last_error() !== JSON_ERROR_NONE) {
+            Log::warning('Claude falló o devolvió JSON inválido, usando Groq como respaldo', [
+                'texto_claude' => $text,
+                'error_json' => json_last_error_msg(),
             ]);
 
-            // Texto crudo de Anthropic
-            $text = $response->json('content.0.text');
-
-            // Log completo de la respuesta
-            Log::info('Respuesta Anthropic:', [
-                'response' => $response->json(),
-                'text' => $text
-            ]);
-
-            $clean = preg_replace('/```json\s*/i', '', $text);
-            $clean = preg_replace('/```\s*/i', '', $clean);
-            $clean = trim($clean);
-
-            // Intentar decodificar
+            $text = $this->scanConGroq($imageData, $mimeType);
+            $clean = $this->limpiarJson($text);
             $products = json_decode($clean, true);
-
-            return response()->json([
-                'message' => 'Productos extraídos del ticket',
-                'products' => $products
-            ], 200);
-        } catch (\Exception $e) {
-            return response()->json([
-                'message' => 'Error al procesar la imagen: ' . $e->getMessage()
-            ], 500);
+            $proveedor = 'Groq';
         }
-    }
 
+        // Si ninguno de los dos dio JSON válido, error claro en vez de datos basura
+        if (json_last_error() !== JSON_ERROR_NONE) {
+            Log::error('Ni Claude ni Groq devolvieron JSON válido', [
+                'texto_final' => $text,
+            ]);
+
+            return response()->json([
+                'message' => 'No se pudo procesar el ticket. Intenta con una foto más clara.',
+            ], 422);
+        }
+
+        Log::info("Ticket procesado exitosamente con {$proveedor}");
+
+        return response()->json([
+            'message' => 'Productos extraídos del ticket',
+            'products' => $products
+        ], 200);
+    } catch (\Exception $e) {
+        return response()->json([
+            'message' => 'Error al procesar la imagen: ' . $e->getMessage()
+        ], 500);
+    }
+}
 
 
 

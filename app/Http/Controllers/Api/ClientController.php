@@ -11,7 +11,7 @@ class ClientController extends Controller
     //
       public function index()
     {
-        $clients = Client::orderBy('first_name', 'asc')->get();
+        $clients = Client::with('debts')->orderBy('first_name', 'asc')->get();
         return response()->json([
             'message' => 'Lista de clientes',
             'data' => $clients

@@ -2,6 +2,7 @@
 
 namespace App\Models;
 
+
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
@@ -15,16 +16,13 @@ class Client extends Model
         'first_name', 'last_name', 'phone', 'email', 'credit_limit',
     ];
 
+    protected $appends = ['current_debt'];
+
     protected function casts(): array
     {
         return ['credit_limit' => 'decimal:2'];
     }
 
-    /**
-     * FIX 1: Deuda actual calculada dinamicamente.
-     * En v1 existia una columna current_debt que NUNCA se actualizaba.
-     * Ahora se calcula en tiempo real sumando las deudas no pagadas.
-     */
     public function getCurrentDebtAttribute(): float
     {
         return $this->debts()

@@ -11,11 +11,20 @@ class Sale extends Model
 {
     use HasFactory;
     protected $fillable = [
-        'sale_group_id', 'product_id', 'cash_register_id',
-        'employee_id', 'client_id',
-        'quantity', 'unit_type', 'unit_price', 'total_price',
-        'cash_amount', 'card_amount', 'payment_method', 'status',
-        'change_amount',
+    'sale_group_id',
+    'product_id',
+    'quantity',
+    'unit_type',
+    'total_price',
+    'employee_id',
+    'client_id',
+    'cash_register_id',
+    'payment_method',
+    'card_reference',
+    'cash_amount',
+    'card_amount',
+    'change_amount',
+    'status',
     ];
 
     protected function casts(): array

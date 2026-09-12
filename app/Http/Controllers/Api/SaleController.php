@@ -34,6 +34,7 @@ class SaleController extends Controller
             'payment_method' => 'required|in:cash,card,mixed,credit',
             'cash_amount' => 'required_if:payment_method,cash,mixed|numeric|min:0',
             'card_amount' => 'required_if:payment_method,card,mixed|numeric|min:0',
+            'card_reference' => 'nullable|string|max:50',
         ]);
 
         DB::beginTransaction();
@@ -134,6 +135,7 @@ class SaleController extends Controller
                     'payment_method' => $validated['payment_method'],
                     'cash_amount' => $lineCash,
                     'card_amount' => $lineCard,
+                    'card_reference' => $validated['card_reference'] ?? null,
                     'change_amount' => $i === $lastIndex ? $changeAmount : 0,
                     'status' => 'completed',
                 ]);
