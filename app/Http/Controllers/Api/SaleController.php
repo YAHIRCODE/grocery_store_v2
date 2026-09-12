@@ -31,10 +31,11 @@ class SaleController extends Controller
             'products.*.quantity' => 'required|integer|min:1',
             'products.*.sale_unit_type' => 'nullable|string|in:unit,package',
             'client_id' => 'nullable|exists:clients,id',
-            'payment_method' => 'required|in:cash,card,mixed,credit',
+            'payment_method' => 'required|in:cash,card,mixed,credit,transfer',
             'cash_amount' => 'required_if:payment_method,cash,mixed|numeric|min:0',
             'card_amount' => 'required_if:payment_method,card,mixed|numeric|min:0',
             'card_reference' => 'nullable|string|max:50',
+            'transfer_amount' => 'required_if:payment_method,transfer|numeric|min:0',
         ]);
 
         DB::beginTransaction();
@@ -85,9 +86,10 @@ class SaleController extends Controller
             // 2. Validar que el pago cubra el total (RF-14)
             $cashAmount = $validated['cash_amount'] ?? 0;
             $cardAmount = $validated['card_amount'] ?? 0;
+            $transferAmount = $validated['transfer_amount'] ?? 0;
 
             if ($validated['payment_method'] !== 'credit') {
-                $pagado = $cashAmount + $cardAmount;
+                $pagado = $cashAmount + $cardAmount + $transferAmount;
                 if ($pagado < $ticketTotal) {
                     DB::rollBack();
                     return response()->json(['message' => 'El monto pagado no cubre el total de la venta'], 422);
@@ -96,17 +98,20 @@ class SaleController extends Controller
                 $pagado = 0;
                 $cashAmount = 0;
                 $cardAmount = 0;
+                $transferAmount = 0;
             }
 
             $changeAmount = round(max($pagado - $ticketTotal, 0), 2);
             $cashCobrado = round($cashAmount - $changeAmount, 2);
             $cardCobrado = round($cardAmount, 2);
+            $transferCobrado = round($transferAmount, 2);
 
             // 3. Identificador único para agrupar el ticket
             $saleGroupId = (string) Str::uuid();
             $createdSales = [];
             $sumaCashAsignada = 0;
             $sumaCardAsignada = 0;
+            $sumaTransferAsignada = 0;
             $lastIndex = count($lines) - 1;
 
             foreach ($lines as $i => $line) {
@@ -115,11 +120,14 @@ class SaleController extends Controller
                 if ($i === $lastIndex) {
                     $lineCash = round($cashCobrado - $sumaCashAsignada, 2);
                     $lineCard = round($cardCobrado - $sumaCardAsignada, 2);
+                    $lineTransfer = round($transferCobrado - $sumaTransferAsignada, 2);
                 } else {
                     $lineCash = round($cashCobrado * $proportion, 2);
                     $lineCard = round($cardCobrado * $proportion, 2);
+                    $lineTransfer = round($transferCobrado * $proportion, 2);
                     $sumaCashAsignada += $lineCash;
                     $sumaCardAsignada += $lineCard;
+                    $sumaTransferAsignada += $lineTransfer;
                 }
 
                 $sale = Sale::create([
@@ -135,6 +143,7 @@ class SaleController extends Controller
                     'payment_method' => $validated['payment_method'],
                     'cash_amount' => $lineCash,
                     'card_amount' => $lineCard,
+                    'transfer_amount' => $lineTransfer,
                     'card_reference' => $validated['card_reference'] ?? null,
                     'change_amount' => $i === $lastIndex ? $changeAmount : 0,
                     'status' => 'completed',

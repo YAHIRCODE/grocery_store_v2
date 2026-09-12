@@ -19,8 +19,7 @@ export default function CashOut() {
         const reg = data?.data;
         if (reg && reg.id) {
           setRegister(reg);
-          const expected = (reg.opening_cash || 0);
-          setCounted(expected.toFixed(2));
+          setCounted('');
         } else {
           setRegister(null);
           setNoActiveMsg(data?.message || 'No hay turno activo');
@@ -146,6 +145,7 @@ export default function CashOut() {
                   type="number"
                   value={counted}
                   onChange={(e) => setCounted(e.target.value)}
+                  placeholder="0.00"
                 />
               </div>
             </div>

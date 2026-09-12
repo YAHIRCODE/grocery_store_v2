@@ -23,6 +23,7 @@ class Sale extends Model
     'card_reference',
     'cash_amount',
     'card_amount',
+    'transfer_amount',
     'change_amount',
     'status',
     ];
@@ -35,6 +36,7 @@ class Sale extends Model
             'total_price' => 'decimal:2',
             'cash_amount' => 'decimal:2',
             'card_amount' => 'decimal:2',
+            'transfer_amount' => 'decimal:2',
             'change_amount' => 'decimal:2',
         ];
     }
