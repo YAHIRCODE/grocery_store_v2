@@ -1,3 +1,4 @@
+import { useState } from 'react';
 import { NavLink } from 'react-router-dom';
 import { useAuth } from '../../context/useAuth';
 import {
@@ -13,6 +14,8 @@ import {
   Settings,
   LogOut,
   Store,
+  Sun,
+  Moon,
 } from 'lucide-react';
 
 const NAV_ITEMS = [
@@ -31,6 +34,7 @@ const NAV_ITEMS = [
 export default function Sidebar() {
   const { user, logout } = useAuth();
   const roleName = user?.role?.name;
+  const [darkMode, setDarkMode] = useState(true);
 
   const visibleItems = NAV_ITEMS.filter((item) => item.roles.includes(roleName));
 
@@ -75,6 +79,14 @@ export default function Sidebar() {
 
       {/* User Profile & Logout */}
       <div className="px-3 py-4 border-t border-border">
+        <button
+          onClick={() => setDarkMode((prev) => !prev)}
+          className="w-full flex items-center gap-3 text-left text-[13px] leading-[18px] text-text-secondary hover:text-white transition-colors px-3 py-2.5 rounded-lg hover:bg-white/5 mb-3"
+          title={darkMode ? 'Cambiar a modo claro' : 'Cambiar a modo oscuro'}
+        >
+          {darkMode ? <Moon size={20} /> : <Sun size={20} />}
+          {darkMode ? 'Modo Oscuro' : 'Modo Claro'}
+        </button>
         <div className="flex items-center gap-3 px-3 py-3 rounded-lg bg-bg border border-border mb-3">
           <div className="w-9 h-9 rounded-lg bg-structural/20 border border-border flex items-center justify-center">
             <span className="text-[12px] font-bold text-accent">

@@ -13,6 +13,8 @@ export default function PointOfSale() {
   const [cashAmount, setCashAmount] = useState('');
   const [cardAmount, setCardAmount] = useState('');
   const [cardRef, setCardRef] = useState('');
+  const [transferAmount, setTransferAmount] = useState('');
+  const [transferRef, setTransferRef] = useState('');
   const [searchQuery, setSearchQuery] = useState('');
   const [searchResults, setSearchResults] = useState([]);
   const [searching, setSearching] = useState(false);
@@ -136,6 +138,7 @@ export default function PointOfSale() {
         payment_method: paymentMethod,
         cash_amount: paymentMethod === 'cash' || paymentMethod === 'mixed' ? parseFloat(cashAmount) || 0 : 0,
         card_amount: paymentMethod === 'card' || paymentMethod === 'mixed' ? parseFloat(cardAmount) || 0 : 0,
+        transfer_amount: paymentMethod === 'transfer' ? parseFloat(transferAmount) || 0 : 0,
       };
       if (clientId) payload.client_id = clientId;
       const res = await api.post('/sales', payload);
@@ -160,6 +163,8 @@ export default function PointOfSale() {
       setCashAmount('');
       setCardAmount('');
       setCardRef('');
+      setTransferAmount('');
+      setTransferRef('');
       setDueDate('');
       setTimeout(() => setSaleMessage(''), 5000);
     } catch (err) {
@@ -342,17 +347,18 @@ export default function PointOfSale() {
           </div>
 
           <div className="p-4 border-t border-border bg-surface flex flex-col gap-4">
-            <div className="flex gap-2">
+            <div className="grid grid-cols-3 gap-2">
               {[
                 { key: 'cash', label: 'Efectivo', icon: Banknote },
                 { key: 'card', label: 'Tarjeta', icon: CreditCard },
+                { key: 'transfer', label: 'Transferencia', icon: Banknote },
                 { key: 'mixed', label: 'Mixto', icon: Split },
                 { key: 'credit', label: 'Crédito', icon: Calendar },
               ].map((m) => (
                 <button
                   key={m.key}
                   onClick={() => setPaymentMethod(m.key)}
-                  className={`flex-1 py-2 border rounded text-[12px] leading-[16px] tracking-widest uppercase font-bold transition-colors flex flex-col items-center gap-1 ${
+                  className={`py-2 border rounded text-[11px] leading-[16px] tracking-widest uppercase font-bold transition-colors flex flex-col items-center gap-1 ${
                     paymentMethod === m.key
                       ? 'border-accent bg-accent/10 text-accent'
                       : 'border-border bg-bg text-text-secondary hover:border-accent hover:text-accent'
@@ -442,6 +448,34 @@ export default function PointOfSale() {
                   value={cardRef}
                   onChange={(e) => setCardRef(e.target.value)}
                 />
+              </div>
+            )}
+
+            {paymentMethod === 'transfer' && (
+              <div className="flex flex-col gap-3 p-3 bg-bg border border-border rounded">
+                <div className="flex flex-col gap-1">
+                  <label className="text-[10px] font-bold tracking-widest uppercase text-text-secondary">Monto Transferido</label>
+                  <div className="relative">
+                    <span className="absolute left-2 top-1/2 -translate-y-1/2 text-text-secondary font-mono">$</span>
+                    <input
+                      className="w-full bg-surface border border-border rounded pl-6 pr-2 py-1 text-sm font-mono text-white focus:outline-none focus:border-accent"
+                      placeholder="0.00"
+                      type="number"
+                      value={transferAmount}
+                      onChange={(e) => setTransferAmount(e.target.value)}
+                    />
+                  </div>
+                </div>
+                <div className="flex flex-col gap-1">
+                  <label className="text-[10px] font-bold tracking-widest uppercase text-text-secondary">Referencia / Folio</label>
+                  <input
+                    className="w-full bg-surface border border-border rounded px-3 py-1 text-sm font-mono text-white focus:outline-none focus:border-accent"
+                    placeholder="Ej: 123456"
+                    type="text"
+                    value={transferRef}
+                    onChange={(e) => setTransferRef(e.target.value)}
+                  />
+                </div>
               </div>
             )}
 
