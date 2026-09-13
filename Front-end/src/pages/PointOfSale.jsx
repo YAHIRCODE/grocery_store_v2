@@ -83,17 +83,39 @@ export default function PointOfSale() {
   }, [searchQuery, searchProducts]);
 
   const addToCart = (product) => {
-    setCart((prev) => {
-      const existing = prev.find((item) => item.product_id === product.id);
-      if (existing) {
-        return prev.map((item) =>
-          item.product_id === product.id ? { ...item, qty: item.qty + 1 } : item
-        );
-      }
-      return [...prev, {
+    const weightUnit = product.saleUnits?.find((u) => u.unit_type === 'weight');
+
+    if (weightUnit) {
+      // Cada línea por peso se agrega por separado: los gramos son ajustables
+      // por línea, así que no tiene sentido fusionarla con una existente.
+      setCart((prev) => [...prev, {
+        lineId: `${product.id}-${Date.now()}-${Math.random()}`,
         product_id: product.id,
         name: product.name,
         barcode: product.barcode || '',
+        unitType: 'weight',
+        pricePerKg: Number(weightUnit.unit_price),
+        grams: 250,
+        qty: 1,
+      }]);
+      setSearchQuery('');
+      setSearchResults([]);
+      return;
+    }
+
+    setCart((prev) => {
+      const existing = prev.find((item) => item.product_id === product.id && item.unitType !== 'weight');
+      if (existing) {
+        return prev.map((item) =>
+          item.lineId === existing.lineId ? { ...item, qty: item.qty + 1 } : item
+        );
+      }
+      return [...prev, {
+        lineId: `${product.id}-${Date.now()}-${Math.random()}`,
+        product_id: product.id,
+        name: product.name,
+        barcode: product.barcode || '',
+        unitType: 'unit',
         price: product.price,
         qty: 1,
       }];
@@ -102,22 +124,35 @@ export default function PointOfSale() {
     setSearchResults([]);
   };
 
-  const updateQty = (productId, delta) => {
+  const updateQty = (lineId, delta) => {
     setCart((prev) =>
       prev.map((item) =>
-        item.product_id === productId
+        item.lineId === lineId
           ? { ...item, qty: Math.max(1, item.qty + delta) }
           : item
       )
     );
   };
 
-  const removeItem = (productId) => {
-    setCart((prev) => prev.filter((item) => item.product_id !== productId));
+  const updateGrams = (lineId, grams) => {
+    setCart((prev) =>
+      prev.map((item) =>
+        item.lineId === lineId
+          ? { ...item, grams: Math.max(1, parseInt(grams, 10) || 0) }
+          : item
+      )
+    );
   };
 
-  const subtotal = cart.reduce((sum, item) => sum + item.price * item.qty, 0);
-  const totalItems = cart.reduce((sum, item) => sum + item.qty, 0);
+  const removeItem = (lineId) => {
+    setCart((prev) => prev.filter((item) => item.lineId !== lineId));
+  };
+
+  const lineTotal = (item) =>
+    item.unitType === 'weight' ? (item.pricePerKg / 1000) * item.grams : item.price * item.qty;
+
+  const subtotal = cart.reduce((sum, item) => sum + lineTotal(item), 0);
+  const totalItems = cart.reduce((sum, item) => sum + (item.unitType === 'weight' ? 1 : item.qty), 0);
 
   const todayStr = new Date().toISOString().slice(0, 10);
 
@@ -131,10 +166,11 @@ export default function PointOfSale() {
     setSaleMessage('');
     try {
       const payload = {
-        products: cart.map((item) => ({
-          product_id: item.product_id,
-          quantity: item.qty,
-        })),
+        products: cart.map((item) =>
+          item.unitType === 'weight'
+            ? { product_id: item.product_id, sale_unit_type: 'weight', weight_grams: item.grams }
+            : { product_id: item.product_id, quantity: item.qty }
+        ),
         payment_method: paymentMethod,
         cash_amount: paymentMethod === 'cash' || paymentMethod === 'mixed' ? parseFloat(cashAmount) || 0 : 0,
         card_amount: paymentMethod === 'card' || paymentMethod === 'mixed' ? parseFloat(cardAmount) || 0 : 0,
@@ -192,19 +228,24 @@ export default function PointOfSale() {
           />
           {searchResults.length > 0 && (
             <div className="absolute top-full left-0 right-0 mt-1 bg-surface border border-border rounded-lg shadow-xl z-50 max-h-64 overflow-y-auto">
-              {searchResults.map((p) => (
-                <button
-                  key={p.id}
-                  onClick={() => addToCart(p)}
-                  className="w-full flex items-center justify-between px-4 py-3 hover:bg-border/50 transition-colors text-left"
-                >
-                  <div>
-                    <div className="text-sm text-white font-semibold">{p.name}</div>
-                    <div className="text-[11px] text-text-secondary font-mono">{p.barcode || p.sku}</div>
-                  </div>
-                  <span className="font-mono text-accent text-sm">{fmt(p.price)}</span>
-                </button>
-              ))}
+              {searchResults.map((p) => {
+                const weightUnit = p.saleUnits?.find((u) => u.unit_type === 'weight');
+                return (
+                  <button
+                    key={p.id}
+                    onClick={() => addToCart(p)}
+                    className="w-full flex items-center justify-between px-4 py-3 hover:bg-border/50 transition-colors text-left"
+                  >
+                    <div>
+                      <div className="text-sm text-white font-semibold">{p.name}</div>
+                      <div className="text-[11px] text-text-secondary font-mono">{p.barcode || p.sku}</div>
+                    </div>
+                    <span className="font-mono text-accent text-sm">
+                      {weightUnit ? `${fmt(weightUnit.unit_price)}/kg` : fmt(p.price)}
+                    </span>
+                  </button>
+                );
+              })}
               {searching && <div className="px-4 py-2 text-text-secondary text-sm">Buscando...</div>}
             </div>
           )}
@@ -231,7 +272,7 @@ export default function PointOfSale() {
 
           <div className="flex-1 overflow-y-auto bg-bg z-10">
             {cart.map((item) => (
-              <div key={item.product_id} className="grid grid-cols-[auto_1fr_auto_auto_auto] gap-3 px-4 py-3 border-b border-border items-center hover:bg-surface transition-colors group relative">
+              <div key={item.lineId} className="grid grid-cols-[auto_1fr_auto_auto_auto] gap-3 px-4 py-3 border-b border-border items-center hover:bg-surface transition-colors group relative">
                 <div className="w-12 h-12 bg-border rounded flex items-center justify-center">
                   <ShoppingBasket size={20} className="text-accent" />
                 </div>
@@ -239,25 +280,41 @@ export default function PointOfSale() {
                   <span className="text-sm text-white font-semibold">{item.name}</span>
                   <span className="font-mono text-[11px] text-text-secondary">BAR: {item.barcode}</span>
                 </div>
-                <div className="w-24 flex items-center justify-center gap-2">
-                  <button
-                    onClick={() => updateQty(item.product_id, -1)}
-                    className="w-6 h-6 rounded bg-border flex items-center justify-center text-text-secondary hover:text-accent hover:border-accent border border-transparent transition-colors"
-                  >
-                    <Minus size={16} />
-                  </button>
-                  <span className="font-mono w-6 text-center text-white">{item.qty}</span>
-                  <button
-                    onClick={() => updateQty(item.product_id, 1)}
-                    className="w-6 h-6 rounded bg-border flex items-center justify-center text-text-secondary hover:text-accent hover:border-accent border border-transparent transition-colors"
-                  >
-                    <Plus size={16} />
-                  </button>
+                {item.unitType === 'weight' ? (
+                  <div className="w-24 flex items-center justify-center gap-1">
+                    <input
+                      type="number"
+                      min="1"
+                      step="10"
+                      value={item.grams}
+                      onChange={(e) => updateGrams(item.lineId, e.target.value)}
+                      className="w-14 bg-surface border border-border rounded px-1 py-1 text-center font-mono text-white text-sm focus:outline-none focus:border-accent"
+                    />
+                    <span className="text-[11px] text-text-secondary">g</span>
+                  </div>
+                ) : (
+                  <div className="w-24 flex items-center justify-center gap-2">
+                    <button
+                      onClick={() => updateQty(item.lineId, -1)}
+                      className="w-6 h-6 rounded bg-border flex items-center justify-center text-text-secondary hover:text-accent hover:border-accent border border-transparent transition-colors"
+                    >
+                      <Minus size={16} />
+                    </button>
+                    <span className="font-mono w-6 text-center text-white">{item.qty}</span>
+                    <button
+                      onClick={() => updateQty(item.lineId, 1)}
+                      className="w-6 h-6 rounded bg-border flex items-center justify-center text-text-secondary hover:text-accent hover:border-accent border border-transparent transition-colors"
+                    >
+                      <Plus size={16} />
+                    </button>
+                  </div>
+                )}
+                <div className="w-24 text-right font-mono text-text-secondary">
+                  {item.unitType === 'weight' ? `${fmt(item.pricePerKg)}/kg` : fmt(item.price)}
                 </div>
-                <div className="w-24 text-right font-mono text-text-secondary">{fmt(item.price)}</div>
-                <div className="w-24 text-right font-mono text-white">{fmt(item.price * item.qty)}</div>
+                <div className="w-24 text-right font-mono text-white">{fmt(lineTotal(item))}</div>
                 <button
-                  onClick={() => removeItem(item.product_id)}
+                  onClick={() => removeItem(item.lineId)}
                   className="absolute right-4 opacity-0 group-hover:opacity-100 p-1 text-error hover:bg-error/10 rounded transition-all"
                 >
                   <Trash2 size={18} />

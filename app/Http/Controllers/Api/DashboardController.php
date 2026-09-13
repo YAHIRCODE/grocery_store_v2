@@ -31,10 +31,13 @@ class DashboardController extends Controller
             ->where('status', 'completed')
             ->sum('total_price');
 
+        // Las líneas vendidas por peso guardan gramos en sales.quantity y
+        // products.purchase_price representa el costo por KILOGRAMO para esos
+        // productos, así que su costo se calcula distinto al de unidad/paquete.
         $costoVentasHoy = Sale::where('sales.status', 'completed')
             ->whereDate('sales.created_at', Carbon::today())
             ->join('products', 'sales.product_id', '=', 'products.id')
-            ->selectRaw('SUM(products.purchase_price * sales.quantity) as total')
+            ->selectRaw("SUM(CASE WHEN sales.unit_type = 'weight' THEN (products.purchase_price / 1000) * sales.quantity ELSE products.purchase_price * sales.quantity END) as total")
             ->value('total') ?? 0;
 
         $productosConBajoStock = Product::whereColumn('stock', '<=', 'min_stock')->count();
@@ -68,7 +71,7 @@ class DashboardController extends Controller
         $gastos = Sale::where('sales.status', 'completed')
             ->whereBetween('sales.created_at', [$desde, $hasta])
             ->join('products', 'sales.product_id', '=', 'products.id')
-            ->selectRaw('DATE(sales.created_at) as fecha, SUM(products.purchase_price * sales.quantity) as total')
+            ->selectRaw("DATE(sales.created_at) as fecha, SUM(CASE WHEN sales.unit_type = 'weight' THEN (products.purchase_price / 1000) * sales.quantity ELSE products.purchase_price * sales.quantity END) as total")
             ->groupBy('fecha')
             ->pluck('total', 'fecha');
 

@@ -6,6 +6,7 @@ use App\Http\Controllers\Controller;
 use Illuminate\Http\Request;
 use App\Models\Sale;
 use App\Models\Product;
+use App\Models\ProductSaleUnit;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Str;
@@ -28,8 +29,9 @@ class SaleController extends Controller
         $validated = $request->validate([
             'products' => 'required|array|min:1',
             'products.*.product_id' => 'required|exists:products,id',
-            'products.*.quantity' => 'required|integer|min:1',
-            'products.*.sale_unit_type' => 'nullable|string|in:unit,package',
+            'products.*.sale_unit_type' => 'nullable|string|in:unit,package,weight',
+            'products.*.quantity' => 'required_unless:products.*.sale_unit_type,weight|integer|min:1',
+            'products.*.weight_grams' => 'required_if:products.*.sale_unit_type,weight|integer|min:1',
             'client_id' => 'nullable|exists:clients,id',
             'payment_method' => 'required|in:cash,card,mixed,credit,transfer',
             'cash_amount' => 'required_if:payment_method,cash,mixed|numeric|min:0',
@@ -64,21 +66,55 @@ class SaleController extends Controller
 
             foreach ($validated['products'] as $item) {
                 $product = Product::findOrFail($item['product_id']);
+                $saleUnitType = $item['sale_unit_type'] ?? 'unit';
 
-                if ($product->stock < $item['quantity']) {
-                    DB::rollBack();
-                    return response()->json([
-                        'message' => "No hay suficiente stock de {$product->name} (disponible: {$product->stock})"
-                    ], 400);
+                if ($saleUnitType === 'weight') {
+                    // Para venta por peso, el stock del producto se mantiene en gramos
+                    // y el precio se toma de su ProductSaleUnit (unit_price = precio por kg),
+                    // no del precio fijo por pieza en products.price.
+                    $weightGrams = (int) $item['weight_grams'];
+
+                    $saleUnit = ProductSaleUnit::where('product_id', $product->id)
+                        ->where('unit_type', 'weight')
+                        ->first();
+
+                    if (!$saleUnit) {
+                        DB::rollBack();
+                        return response()->json([
+                            'message' => "{$product->name} no tiene un precio por peso configurado"
+                        ], 422);
+                    }
+
+                    if ($product->stock < $weightGrams) {
+                        DB::rollBack();
+                        return response()->json([
+                            'message' => "No hay suficiente stock de {$product->name} (disponible: {$product->stock}g)"
+                        ], 400);
+                    }
+
+                    $unitPrice = $saleUnit->unit_price;
+                    $lineQuantity = $weightGrams;
+                    $lineTotal = round(($unitPrice / 1000) * $weightGrams, 2);
+                } else {
+                    if ($product->stock < $item['quantity']) {
+                        DB::rollBack();
+                        return response()->json([
+                            'message' => "No hay suficiente stock de {$product->name} (disponible: {$product->stock})"
+                        ], 400);
+                    }
+
+                    $unitPrice = $product->price;
+                    $lineQuantity = $item['quantity'];
+                    $lineTotal = $unitPrice * $lineQuantity;
                 }
 
-                $lineTotal = $product->price * $item['quantity'];
                 $ticketTotal += $lineTotal;
 
                 $lines[] = [
                     'product' => $product,
-                    'quantity' => $item['quantity'],
-                    'sale_unit_type' => $item['sale_unit_type'] ?? 'unit',
+                    'quantity' => $lineQuantity,
+                    'unit_price' => $unitPrice,
+                    'sale_unit_type' => $saleUnitType,
                     'total_price' => $lineTotal,
                 ];
             }
@@ -135,7 +171,7 @@ class SaleController extends Controller
                     'product_id' => $line['product']->id,
                     'quantity' => $line['quantity'],
                     'unit_type' => $line['sale_unit_type'],
-                    'unit_price' => $line['product']->price,
+                    'unit_price' => $line['unit_price'],
                     'total_price' => $line['total_price'],
                     'employee_id' => $employee->id,
                     'client_id' => $validated['client_id'] ?? null,

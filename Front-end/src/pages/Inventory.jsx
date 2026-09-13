@@ -175,6 +175,7 @@ export default function Inventory() {
             {paged.map((p) => {
               const status = getStockStatus(p);
               const style = STOCK_STYLE[status];
+              const weightUnit = p.saleUnits?.find((u) => u.unit_type === 'weight');
               return (
                 <tr key={p.id} className="border-b border-border hover:bg-border/30 transition-colors">
                   <td className="py-4 px-4 font-mono text-text-secondary">{p.sku || p.barcode || `#${p.id}`}</td>
@@ -186,7 +187,10 @@ export default function Inventory() {
                       {p.stock || 0} unidades{status === 'low' ? ' (Bajo)' : ''}
                     </span>
                   </td>
-                  <td className="py-4 px-4 font-mono text-right">{fmt(p.price)}</td>
+                  <td className="py-4 px-4 font-mono text-right">
+                    {fmt(p.price)}
+                    {weightUnit && <div className="text-[11px] text-accent">{fmt(weightUnit.unit_price)}/kg</div>}
+                  </td>
                   <td className="py-4 px-4 text-right">
                     <button
                       onClick={() => { setEditingProduct(p); setShowProductForm(true); }}
@@ -287,6 +291,7 @@ export default function Inventory() {
 }
 
 function ProductForm({ product, categories, onClose, onSaved }) {
+  const weightUnit = product?.saleUnits?.find((u) => u.unit_type === 'weight');
   const [form, setForm] = useState({
     name: product?.name || '',
     description: product?.description || '',
@@ -297,6 +302,8 @@ function ProductForm({ product, categories, onClose, onSaved }) {
     barcode: product?.barcode || '',
     min_stock: product?.min_stock ?? '',
   });
+  const [sellByWeight, setSellByWeight] = useState(!!weightUnit);
+  const [pricePerKg, setPricePerKg] = useState(weightUnit?.unit_price || '');
   const [saving, setSaving] = useState(false);
 
   const handleChange = (field, value) => setForm((prev) => ({ ...prev, [field]: value }));
@@ -312,6 +319,9 @@ function ProductForm({ product, categories, onClose, onSaved }) {
         stock: form.stock !== '' ? parseInt(form.stock) : 0,
         min_stock: form.min_stock !== '' ? parseInt(form.min_stock) : 0,
         category_id: parseInt(form.category_id) || null,
+        sale_units: sellByWeight
+          ? [{ unit_type: 'weight', unit_price: parseFloat(pricePerKg) || 0 }]
+          : [],
       };
       if (product) {
         await api.put(`/products/${product.id}`, body);
@@ -345,17 +355,23 @@ function ProductForm({ product, categories, onClose, onSaved }) {
           </div>
           <div className="grid grid-cols-2 gap-4">
             <div>
-              <label className="block text-[12px] tracking-widest uppercase font-bold text-text-secondary mb-1">Precio Venta</label>
+              <label className="block text-[12px] tracking-widest uppercase font-bold text-text-secondary mb-1">
+                Precio Venta{sellByWeight && <span className="normal-case font-normal text-accent"> (por pieza, si aplica)</span>}
+              </label>
               <input className="w-full bg-bg border border-border rounded px-4 py-2.5 text-sm text-white font-mono focus:border-accent outline-none" type="number" step="0.01" value={form.price} onChange={(e) => handleChange('price', e.target.value)} required />
             </div>
             <div>
-              <label className="block text-[12px] tracking-widest uppercase font-bold text-text-secondary mb-1">Precio Compra</label>
+              <label className="block text-[12px] tracking-widest uppercase font-bold text-text-secondary mb-1">
+                Precio Compra{sellByWeight && <span className="normal-case font-normal text-accent"> (por pieza, si aplica)</span>}
+              </label>
               <input className="w-full bg-bg border border-border rounded px-4 py-2.5 text-sm text-white font-mono focus:border-accent outline-none" type="number" step="0.01" value={form.purchase_price} onChange={(e) => handleChange('purchase_price', e.target.value)} required />
             </div>
           </div>
           <div className="grid grid-cols-2 gap-4">
             <div>
-              <label className="block text-[12px] tracking-widest uppercase font-bold text-text-secondary mb-1">Stock</label>
+              <label className="block text-[12px] tracking-widest uppercase font-bold text-text-secondary mb-1">
+                Stock {sellByWeight && <span className="normal-case font-normal text-accent">(en gramos)</span>}
+              </label>
               <input className="w-full bg-bg border border-border rounded px-4 py-2.5 text-sm text-white font-mono focus:border-accent outline-none" type="number" value={form.stock} onChange={(e) => handleChange('stock', e.target.value)} />
             </div>
             <div>
@@ -366,6 +382,36 @@ function ProductForm({ product, categories, onClose, onSaved }) {
           <div>
             <label className="block text-[12px] tracking-widest uppercase font-bold text-text-secondary mb-1">Código de Barras</label>
             <input className="w-full bg-bg border border-border rounded px-4 py-2.5 text-sm text-white font-mono focus:border-accent outline-none" value={form.barcode} onChange={(e) => handleChange('barcode', e.target.value)} />
+          </div>
+          <div className="p-3 bg-bg border border-border rounded flex flex-col gap-3">
+            <label className="flex items-center gap-2 text-sm text-white cursor-pointer">
+              <input
+                type="checkbox"
+                checked={sellByWeight}
+                onChange={(e) => setSellByWeight(e.target.checked)}
+                className="accent-accent"
+              />
+              Se vende por peso (gramos/kg)
+            </label>
+            <p className="text-[11px] text-text-secondary">
+              Si este producto se vende ÚNICAMENTE por peso (ej. queso suelto), deja Precio Venta y Precio Compra en 0, y usa el campo Stock para el peso total disponible en gramos.
+            </p>
+            {sellByWeight && (
+              <div>
+                <label className="block text-[12px] tracking-widest uppercase font-bold text-text-secondary mb-1">Precio por Kg</label>
+                <input
+                  className="w-full bg-surface border border-border rounded px-4 py-2.5 text-sm text-white font-mono focus:border-accent outline-none"
+                  type="number"
+                  step="0.01"
+                  min="0"
+                  value={pricePerKg}
+                  onChange={(e) => setPricePerKg(e.target.value)}
+                  placeholder="0.00"
+                  required
+                />
+                <p className="text-[11px] text-text-secondary mt-1">El punto de venta calculará el total según los gramos capturados.</p>
+              </div>
+            )}
           </div>
           <div>
             <label className="block text-[12px] tracking-widest uppercase font-bold text-text-secondary mb-1">Categoría</label>

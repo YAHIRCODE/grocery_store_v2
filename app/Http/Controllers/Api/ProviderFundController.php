@@ -25,10 +25,16 @@ $supplierDebts = Supplier::withSum(['debts' => function($query) {
             ->get()
             ->groupBy('supplier_id');
 
+        $movimientos = \App\Models\ProviderFundMovement::with('employee')
+            ->orderBy('created_at', 'desc')
+            ->take(20)
+            ->get();
+
         return response()->json([
             'data' => $funds,
             'suppliers_pending' => $supplierDebts,
             'supplier_notes_pending' => $notasPendientes,
+            'movements' => $movimientos,
         ], 200);
     }
 

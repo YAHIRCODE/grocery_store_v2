@@ -15,6 +15,7 @@ class Sale extends Model
     'product_id',
     'quantity',
     'unit_type',
+    'unit_price',
     'total_price',
     'employee_id',
     'client_id',

@@ -4,6 +4,7 @@ import api from '../services/api';
 
 export default function Fund() {
   const [fund, setFund] = useState(null);
+  const [suppliersPending, setSuppliersPending] = useState([]);
   const [movements, setMovements] = useState([]);
   const [loading, setLoading] = useState(true);
   const [securityAlert, setSecurityAlert] = useState(true);
@@ -19,7 +20,8 @@ export default function Fund() {
       const data = res.data;
       const funds = data.data || [];
       setFund(funds[0] || null);
-      setMovements(data.suppliers_pending || []);
+      setSuppliersPending(data.suppliers_pending || []);
+      setMovements(data.movements || []);
     } catch {
       setFund(null);
     } finally {
@@ -155,14 +157,47 @@ export default function Fund() {
               </tr>
             </thead>
             <tbody className="font-mono text-[13px] divide-y divide-border/50">
-              {(movements || []).map((s, i) => (
+              {(suppliersPending || []).map((s, i) => (
                 <tr key={s.id || i} className="hover:bg-border/30 transition-colors">
                   <td className="py-4 px-4 text-white">{s.company_name || s.name}</td>
                   <td className="py-4 px-4 text-right text-error">${(s.debts_sum_amount || 0).toLocaleString('en-US', { minimumFractionDigits: 2 })}</td>
                 </tr>
               ))}
-              {(!movements || movements.length === 0) && (
+              {(!suppliersPending || suppliersPending.length === 0) && (
                 <tr><td colSpan={2} className="py-6 text-center text-text-secondary">No hay proveedores con deuda pendiente</td></tr>
+              )}
+            </tbody>
+          </table>
+        </div>
+      </div>
+
+      <div className="bg-surface border border-border rounded-lg overflow-hidden">
+        <div className="px-4 py-3 border-b border-border flex justify-between items-center bg-bg">
+          <h3 className="text-[12px] leading-[16px] tracking-widest uppercase font-bold text-text-secondary">Movimientos Recientes</h3>
+        </div>
+        <div className="overflow-x-auto w-full">
+          <table className="w-full text-left border-collapse">
+            <thead>
+              <tr className="border-b border-border bg-border/50">
+                <th className="py-3 px-4 text-[12px] leading-[16px] tracking-widest uppercase font-bold text-text-secondary">Fecha</th>
+                <th className="py-3 px-4 text-[12px] leading-[16px] tracking-widest uppercase font-bold text-text-secondary">Tipo</th>
+                <th className="py-3 px-4 text-[12px] leading-[16px] tracking-widest uppercase font-bold text-text-secondary text-right">Monto</th>
+                <th className="py-3 px-4 text-[12px] leading-[16px] tracking-widest uppercase font-bold text-text-secondary">Empleado</th>
+                <th className="py-3 px-4 text-[12px] leading-[16px] tracking-widest uppercase font-bold text-text-secondary">Motivo</th>
+              </tr>
+            </thead>
+            <tbody className="font-mono text-[13px] divide-y divide-border/50">
+              {(movements || []).map((m, i) => (
+                <tr key={m.id || i} className="hover:bg-border/30 transition-colors">
+                  <td className="py-4 px-4 text-text-secondary">{m.created_at ? new Date(m.created_at).toLocaleString('es-MX') : '-'}</td>
+                  <td className="py-4 px-4 text-white">{m.type}</td>
+                  <td className="py-4 px-4 text-right text-white">${Number(m.amount || 0).toLocaleString('en-US', { minimumFractionDigits: 2 })}</td>
+                  <td className="py-4 px-4 text-white">{m.employee ? `${m.employee.first_name || ''} ${m.employee.last_name || ''}`.trim() : '-'}</td>
+                  <td className="py-4 px-4 text-text-secondary">{m.reason || '-'}</td>
+                </tr>
+              ))}
+              {(!movements || movements.length === 0) && (
+                <tr><td colSpan={5} className="py-6 text-center text-text-secondary">No hay movimientos recientes</td></tr>
               )}
             </tbody>
           </table>
