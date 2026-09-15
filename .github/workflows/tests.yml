@@ -30,6 +30,9 @@ jobs:
           echo "DB_DATABASE=grocery_store_test" >> .env
           echo "DB_USERNAME=root" >> .env
           echo "DB_PASSWORD=root" >> .env
+      - run: php artisan config:clear
+      - name: Verificar .env
+        run: cat .env | grep DB_
       - run: php artisan test
 
   frontend:
