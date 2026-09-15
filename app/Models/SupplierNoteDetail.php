@@ -18,7 +18,7 @@ class SupplierNoteDetail extends Model
     {
         return [
             'quantity_agreed' => 'integer',
-            'quantity_received' => 'integer',
+            'quantity_received' => 'decimal:2',
             'price_agreed' => 'decimal:2',
             'discount' => 'decimal:2',
             'is_gift' => 'boolean',

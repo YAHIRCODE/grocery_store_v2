@@ -1,13 +1,15 @@
 import { useState, useEffect, useCallback } from 'react';
+import { useNavigate } from 'react-router-dom';
 import {
   Search, Bell, Settings, Minus, Plus, Trash2, User,
-  Banknote, CreditCard, Split, CheckCircle, ShoppingBasket, Calendar,
+  Banknote, CreditCard, Split, CheckCircle, ShoppingBasket, Calendar, History,
 } from 'lucide-react';
 import api from '../services/api';
 
 const fmt = (n) => `$ ${Number(n || 0).toLocaleString('en-US', { minimumFractionDigits: 2 })}`;
 
 export default function PointOfSale() {
+  const navigate = useNavigate();
   const [cart, setCart] = useState([]);
   const [paymentMethod, setPaymentMethod] = useState('cash');
   const [cashAmount, setCashAmount] = useState('');
@@ -251,6 +253,13 @@ export default function PointOfSale() {
           )}
         </div>
         <div className="flex items-center gap-4">
+          <button
+            onClick={() => navigate('/sales-history')}
+            title="Historial de Ventas"
+            className="flex items-center gap-2 px-3 py-2 rounded text-text-secondary hover:bg-border hover:text-white transition-colors text-sm font-semibold"
+          >
+            <History size={20} /> Historial
+          </button>
           <button className="p-2 rounded-full text-text-secondary hover:bg-border hover:text-white transition-colors">
             <Bell size={20} />
           </button>

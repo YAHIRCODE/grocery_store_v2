@@ -46,6 +46,7 @@ Route::middleware(['auth:sanctum', 'role:Cajero,Administrador'])->group(function
     Route::apiResource('sales', SaleController::class);
     Route::post('sales/{id}/cancel', [SaleController::class, 'cancel']);
     Route::post('sales/group/{saleGroupId}/cancel', [SaleController::class, 'cancelGroup']);
+    Route::patch('sales/group/{saleGroupId}/client', [SaleController::class, 'updateClient']);
 });
 
 Route::middleware(['auth:sanctum', 'role:Administrador'])->group(function () {

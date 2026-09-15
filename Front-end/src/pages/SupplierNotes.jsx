@@ -24,6 +24,7 @@ export default function SupplierNotes() {
   const [receivedQtys, setReceivedQtys] = useState({});
   const [observations, setObservations] = useState('');
   const [confirming, setConfirming] = useState(false);
+  const [confirmError, setConfirmError] = useState('');
   const [showForm, setShowForm] = useState(false);
   const [scanning, setScanning] = useState(false);
   const [scanResult, setScanResult] = useState(null);
@@ -37,6 +38,7 @@ export default function SupplierNotes() {
     });
     setReceivedQtys(qtys);
     setObservations(note.observations || '');
+    setConfirmError('');
   }, []);
 
   const fetchNotes = useCallback(async (status) => {
@@ -62,12 +64,13 @@ export default function SupplierNotes() {
   }, [activeTab, fetchNotes]);
 
   const handleQtyChange = (productId, value) => {
-    setReceivedQtys((prev) => ({ ...prev, [productId]: parseInt(value) || 0 }));
+    setReceivedQtys((prev) => ({ ...prev, [productId]: parseFloat(value) || 0 }));
   };
 
   const handleConfirm = async () => {
     if (!selectedNote) return;
     setConfirming(true);
+    setConfirmError('');
     try {
       const products = (selectedNote.details || []).map((d) => ({
         product_id: d.product_id,
@@ -78,8 +81,8 @@ export default function SupplierNotes() {
         observations: observations || null,
       });
       fetchNotes(activeTab);
-    } catch {
-      // silently fail
+    } catch (err) {
+      setConfirmError(err.response?.data?.message || 'Error al confirmar la recepción');
     } finally {
       setConfirming(false);
     }
@@ -205,16 +208,19 @@ export default function SupplierNotes() {
                     <span>Fecha: {selectedNote.delivery_date}</span>
                   </div>
                 </div>
-                <div className="flex gap-3">
-                  {selectedNote.status === 'pending' && (
-                    <button
-                      onClick={handleConfirm}
-                      disabled={confirming}
-                      className="bg-accent text-bg hover:opacity-90 text-[12px] leading-[16px] tracking-widest uppercase font-bold px-4 py-2 rounded transition-colors flex items-center gap-2 disabled:opacity-50"
-                    >
-                      <CheckCircle size={18} /> {confirming ? 'Confirmando...' : 'Confirmar Recepción'}
-                    </button>
-                  )}
+                <div className="flex flex-col items-end gap-2">
+                  <div className="flex gap-3">
+                    {selectedNote.status === 'pending' && (
+                      <button
+                        onClick={handleConfirm}
+                        disabled={confirming}
+                        className="bg-accent text-bg hover:opacity-90 text-[12px] leading-[16px] tracking-widest uppercase font-bold px-4 py-2 rounded transition-colors flex items-center gap-2 disabled:opacity-50"
+                      >
+                        <CheckCircle size={18} /> {confirming ? 'Confirmando...' : 'Confirmar Recepción'}
+                      </button>
+                    )}
+                  </div>
+                  {confirmError && <div className="text-sm text-error">{confirmError}</div>}
                 </div>
               </div>
 
@@ -249,6 +255,7 @@ export default function SupplierNotes() {
                                       : 'border-error text-error bg-error/20 focus:ring-error'
                                   }`}
                                   type="number"
+                                  step="0.01"
                                   value={received}
                                   onChange={(e) => handleQtyChange(d.product_id, e.target.value)}
                                 />

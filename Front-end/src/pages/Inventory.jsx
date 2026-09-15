@@ -29,10 +29,14 @@ export default function Inventory() {
   const [showProductForm, setShowProductForm] = useState(false);
   const [editingProduct, setEditingProduct] = useState(null);
   const [page, setPage] = useState(1);
+  const [loadError, setLoadError] = useState('');
+  const [categoryError, setCategoryError] = useState('');
+  const [listError, setListError] = useState('');
   const perPage = 20;
 
   const fetchData = async () => {
     setLoading(true);
+    setLoadError('');
     try {
       const [prodRes, catRes] = await Promise.all([
         api.get('/products'),
@@ -40,8 +44,8 @@ export default function Inventory() {
       ]);
       setProducts(Array.isArray(prodRes.data) ? prodRes.data : []);
       setCategories(catRes.data?.data || []);
-    } catch {
-      // silently fail
+    } catch (err) {
+      setLoadError(err.response?.data?.message || 'Error al cargar el inventario');
     } finally {
       setLoading(false);
     }
@@ -64,32 +68,35 @@ export default function Inventory() {
 
   const addCategory = async () => {
     if (!newCategory.trim()) return;
+    setCategoryError('');
     try {
       await api.post('/categories', { name: newCategory.trim() });
       setNewCategory('');
       const res = await api.get('/categories');
       setCategories(res.data?.data || []);
-    } catch {
-      // silently fail
+    } catch (err) {
+      setCategoryError(err.response?.data?.message || 'Error al agregar la categoría');
     }
   };
 
   const removeCategory = async (cat) => {
+    setCategoryError('');
     try {
       await api.delete(`/categories/${cat.id}`);
       setCategories((prev) => prev.filter((c) => c.id !== cat.id));
-    } catch {
-      // silently fail
+    } catch (err) {
+      setCategoryError(err.response?.data?.message || 'Error al eliminar la categoría');
     }
   };
 
   const deleteProduct = async (id) => {
     if (!confirm('¿Eliminar este producto?')) return;
+    setListError('');
     try {
       await api.delete(`/products/${id}`);
       setProducts((prev) => prev.filter((p) => p.id !== id));
-    } catch {
-      // silently fail
+    } catch (err) {
+      setListError(err.response?.data?.message || 'Error al eliminar el producto');
     }
   };
 
@@ -110,7 +117,7 @@ export default function Inventory() {
         </div>
         <div className="flex items-center gap-3">
           <button
-            onClick={() => setShowCategories(true)}
+            onClick={() => { setCategoryError(''); setShowCategories(true); }}
             className="flex items-center gap-2 px-4 py-2.5 bg-surface border border-border text-text-secondary text-sm rounded hover:bg-border/30 hover:border-accent transition-colors"
           >
             <Tags size={18} /> Gestionar Categorías
@@ -126,6 +133,13 @@ export default function Inventory() {
           </button>
         </div>
       </div>
+
+      {loadError && (
+        <div className="text-sm text-error bg-error/10 border border-error/30 rounded-lg px-4 py-3">{loadError}</div>
+      )}
+      {listError && (
+        <div className="text-sm text-error bg-error/10 border border-error/30 rounded-lg px-4 py-3">{listError}</div>
+      )}
 
       <div className="bg-surface p-4 rounded-t-lg border border-border border-b-0 flex items-center justify-between">
         <div className="flex items-center gap-3">
@@ -260,6 +274,7 @@ export default function Inventory() {
                   />
                   <button onClick={addCategory} className="px-4 py-2.5 bg-accent text-bg font-semibold rounded hover:opacity-90 transition-colors">Agregar</button>
                 </div>
+                {categoryError && <div className="text-sm text-error mt-2">{categoryError}</div>}
               </div>
               <div className="space-y-3">
                 <label className="block text-[12px] leading-[16px] tracking-widest uppercase font-bold text-text-secondary mb-2">Categorías Existentes</label>
@@ -305,12 +320,14 @@ function ProductForm({ product, categories, onClose, onSaved }) {
   const [sellByWeight, setSellByWeight] = useState(!!weightUnit);
   const [pricePerKg, setPricePerKg] = useState(weightUnit?.unit_price || '');
   const [saving, setSaving] = useState(false);
+  const [error, setError] = useState('');
 
   const handleChange = (field, value) => setForm((prev) => ({ ...prev, [field]: value }));
 
   const handleSubmit = async (e) => {
     e.preventDefault();
     setSaving(true);
+    setError('');
     try {
       const body = {
         ...form,
@@ -329,8 +346,8 @@ function ProductForm({ product, categories, onClose, onSaved }) {
         await api.post('/products', body);
       }
       onSaved();
-    } catch {
-      // silently fail
+    } catch (err) {
+      setError(err.response?.data?.message || 'Error al guardar el producto');
     } finally {
       setSaving(false);
     }
@@ -345,6 +362,7 @@ function ProductForm({ product, categories, onClose, onSaved }) {
           <button onClick={onClose} className="p-2 text-text-secondary hover:text-white transition-colors"><X size={20} /></button>
         </div>
         <form onSubmit={handleSubmit} className="flex-1 overflow-y-auto p-6 flex flex-col gap-4">
+          {error && <div className="text-sm text-error">{error}</div>}
           <div>
             <label className="block text-[12px] tracking-widest uppercase font-bold text-text-secondary mb-1">Nombre</label>
             <input className="w-full bg-bg border border-border rounded px-4 py-2.5 text-sm text-white focus:border-accent outline-none" value={form.name} onChange={(e) => handleChange('name', e.target.value)} required />

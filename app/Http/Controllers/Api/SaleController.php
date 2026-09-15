@@ -221,6 +221,27 @@ class SaleController extends Controller
 
 
     /**
+     * Cambia el cliente asociado a TODAS las líneas de un ticket (sale_group_id).
+     * El cliente no afecta precios ni pagos, así que no requiere recalcular nada.
+     */
+    public function updateClient(Request $request, string $saleGroupId)
+    {
+        $validated = $request->validate([
+            'client_id' => 'nullable|exists:clients,id',
+        ]);
+
+        $lineas = Sale::where('sale_group_id', $saleGroupId)->get();
+
+        if ($lineas->isEmpty()) {
+            return response()->json(['message' => 'No se encontró ningún ticket con ese identificador'], 404);
+        }
+
+        Sale::where('sale_group_id', $saleGroupId)->update(['client_id' => $validated['client_id'] ?? null]);
+
+        return response()->json(['message' => 'Cliente actualizado exitosamente']);
+    }
+
+    /**
      * Update the specified resource in storage.
      */
     /**
@@ -230,7 +251,9 @@ class SaleController extends Controller
     {
         $validated = $request->validate([
             'product_id' => 'required|exists:products,id',
-            'quantity' => 'required|integer|min:1',
+            'sale_unit_type' => 'nullable|string|in:unit,package,weight',
+            'quantity' => 'required_unless:sale_unit_type,weight|integer|min:1',
+            'weight_grams' => 'required_if:sale_unit_type,weight|integer|min:1',
             'additional_cash' => 'nullable|numeric|min:0',
             'additional_card' => 'nullable|numeric|min:0',
         ]);
@@ -251,17 +274,51 @@ class SaleController extends Controller
             $oldProduct = Product::findOrFail($sale->product_id);
             $newProduct = Product::findOrFail($validated['product_id']);
 
-            // Devolver stock del producto anterior
+            // Devolver stock del producto anterior (la cantidad ya está en la unidad
+            // en que se vendió originalmente: piezas o gramos si era venta por peso).
             $oldProduct->increment('stock', $sale->quantity);
 
-            // Verificar stock del nuevo producto
-            if ($newProduct->stock < $validated['quantity']) {
-                DB::rollBack();
-                return response()->json(['message' => 'No hay suficiente stock disponible'], 400);
-            }
-            $newProduct->decrement('stock', $validated['quantity']);
+            $saleUnitType = $validated['sale_unit_type'] ?? 'unit';
 
-            $newLineTotal = $newProduct->price * $validated['quantity'];
+            if ($saleUnitType === 'weight') {
+                // Igual que en store(): el precio se toma de ProductSaleUnit (por kg)
+                // y la cantidad/stock se manejan en gramos, no en piezas.
+                $weightGrams = (int) $validated['weight_grams'];
+
+                $saleUnit = ProductSaleUnit::where('product_id', $newProduct->id)
+                    ->where('unit_type', 'weight')
+                    ->first();
+
+                if (!$saleUnit) {
+                    DB::rollBack();
+                    return response()->json([
+                        'message' => "{$newProduct->name} no tiene un precio por peso configurado"
+                    ], 422);
+                }
+
+                if ($newProduct->stock < $weightGrams) {
+                    DB::rollBack();
+                    return response()->json([
+                        'message' => "No hay suficiente stock de {$newProduct->name} (disponible: {$newProduct->stock}g)"
+                    ], 400);
+                }
+                $newProduct->decrement('stock', $weightGrams);
+
+                $newQuantity = $weightGrams;
+                $newUnitPrice = $saleUnit->unit_price;
+                $newLineTotal = round(($newUnitPrice / 1000) * $weightGrams, 2);
+            } else {
+                // Verificar stock del nuevo producto
+                if ($newProduct->stock < $validated['quantity']) {
+                    DB::rollBack();
+                    return response()->json(['message' => 'No hay suficiente stock disponible'], 400);
+                }
+                $newProduct->decrement('stock', $validated['quantity']);
+
+                $newQuantity = $validated['quantity'];
+                $newUnitPrice = $newProduct->price;
+                $newLineTotal = $newUnitPrice * $newQuantity;
+            }
 
             // Recalcular el ticket completo — también bloqueamos las líneas hermanas
             // del mismo grupo, por la misma razón: evitar que se lean a medio actualizar.
@@ -308,7 +365,9 @@ class SaleController extends Controller
             // Actualizar la línea editada
             $sale->update([
                 'product_id' => $newProduct->id,
-                'quantity' => $validated['quantity'],
+                'quantity' => $newQuantity,
+                'unit_type' => $saleUnitType,
+                'unit_price' => $newUnitPrice,
                 'total_price' => $newLineTotal,
                 'cash_amount' => $ticketTotal > 0 ? round($cashTotalTicket * ($newLineTotal / $ticketTotal), 2) : 0,
                 'card_amount' => $ticketTotal > 0 ? round($cardTotalTicket * ($newLineTotal / $ticketTotal), 2) : 0,

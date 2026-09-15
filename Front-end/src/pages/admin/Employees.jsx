@@ -148,12 +148,14 @@ function EmployeeForm({ employee, roles, onClose, onSaved }) {
   });
   const [saving, setSaving] = useState(false);
   const [tempPassword, setTempPassword] = useState('');
+  const [error, setError] = useState('');
 
   const handleChange = (field, value) => setForm((prev) => ({ ...prev, [field]: value }));
 
   const handleSubmit = async (e) => {
     e.preventDefault();
     setSaving(true);
+    setError('');
     try {
       const body = {
         ...form,
@@ -171,8 +173,8 @@ function EmployeeForm({ employee, roles, onClose, onSaved }) {
           onSaved();
         }
       }
-    } catch {
-      // silently fail
+    } catch (err) {
+      setError(err.response?.data?.message || 'Error al guardar el empleado');
     } finally {
       setSaving(false);
     }
@@ -273,6 +275,7 @@ function EmployeeForm({ employee, roles, onClose, onSaved }) {
               {roles.map((r) => <option key={r.id} value={r.id}>{r.name}</option>)}
             </select>
           </div>
+          {error && <div className="text-sm text-error">{error}</div>}
           <div className="flex gap-3 mt-4">
             <button type="button" onClick={onClose} className="flex-1 py-2.5 bg-surface border border-border text-white font-semibold rounded hover:bg-border/50 transition-colors">Cancelar</button>
             <button type="submit" disabled={saving} className="flex-1 py-2.5 bg-accent text-bg font-semibold rounded hover:opacity-90 transition-colors disabled:opacity-50">{saving ? 'Guardando...' : 'Guardar'}</button>

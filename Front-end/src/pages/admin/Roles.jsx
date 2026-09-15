@@ -10,6 +10,7 @@ export default function Roles() {
   const [form, setForm] = useState({ name: '', description: '' });
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState('');
+  const [listError, setListError] = useState('');
 
   const fetchRoles = async () => {
     setLoading(true);
@@ -65,11 +66,12 @@ export default function Roles() {
 
   const handleDelete = async (id) => {
     if (!confirm('¿Eliminar este rol?')) return;
+    setListError('');
     try {
       await api.delete(`/roles/${id}`);
       fetchRoles();
-    } catch {
-      // silently fail
+    } catch (err) {
+      setListError(err.response?.data?.message || 'Error al eliminar el rol');
     }
   };
 
@@ -105,6 +107,9 @@ export default function Roles() {
             <Shield size={20} className="text-accent mr-3" /> Roles del Sistema
           </h3>
         </div>
+        {listError && (
+          <div className="mx-4 mb-4 text-sm text-error bg-error/10 border border-error/30 rounded-lg px-4 py-3">{listError}</div>
+        )}
 
         <div className="flex-1 overflow-auto">
           <table className="w-full text-left border-collapse">

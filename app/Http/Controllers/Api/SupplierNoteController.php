@@ -151,7 +151,7 @@ public function store(Request $request)
         $validated = $request->validate([
             'products' => 'required|array|min:1',
             'products.*.product_id' => 'required|exists:products,id',
-            'products.*.quantity_received' => 'required|integer|min:0',
+            'products.*.quantity_received' => 'required|numeric|min:0',
             'observations' => 'nullable|string|max:1000',
         ]);
 

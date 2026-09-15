@@ -27,6 +27,7 @@ export default function ClientsList() {
   const [search] = useState('');
   const [showForm, setShowForm] = useState(false);
   const [editingClient, setEditingClient] = useState(null);
+  const [listError, setListError] = useState('');
 
   const fetchClients = useCallback(async () => {
     setLoading(true);
@@ -59,11 +60,12 @@ export default function ClientsList() {
 
   const handleDelete = async (id) => {
     if (!confirm('¿Eliminar este cliente?')) return;
+    setListError('');
     try {
       await api.delete(`/clients/${id}`);
       fetchClients();
-    } catch {
-      // silently fail
+    } catch (err) {
+      setListError(err.response?.data?.message || 'Error al eliminar el cliente');
     }
   };
 
@@ -128,6 +130,9 @@ export default function ClientsList() {
                 </button>
               </div>
             </div>
+            {listError && (
+              <div className="mx-4 mt-4 text-sm text-error bg-error/10 border border-error/30 rounded-lg px-4 py-3">{listError}</div>
+            )}
 
             <div className="overflow-x-auto flex-1">
               <table className="w-full text-left border-collapse">
@@ -236,12 +241,14 @@ function ClientForm({ client, onClose, onSaved }) {
     credit_limit: client?.credit_limit || '',
   });
   const [saving, setSaving] = useState(false);
+  const [error, setError] = useState('');
 
   const handleChange = (field, value) => setForm((prev) => ({ ...prev, [field]: value }));
 
   const handleSubmit = async (e) => {
     e.preventDefault();
     setSaving(true);
+    setError('');
     try {
       const body = { ...form, credit_limit: parseFloat(form.credit_limit) || 0 };
       if (client) {
@@ -250,8 +257,8 @@ function ClientForm({ client, onClose, onSaved }) {
         await api.post('/clients', body);
       }
       onSaved();
-    } catch {
-      // silently fail
+    } catch (err) {
+      setError(err.response?.data?.message || 'Error al guardar el cliente');
     } finally {
       setSaving(false);
     }
@@ -288,6 +295,7 @@ function ClientForm({ client, onClose, onSaved }) {
             <label className="block text-[12px] tracking-widest uppercase font-bold text-text-secondary mb-1">Límite de Crédito</label>
             <input className="w-full bg-bg border border-border rounded px-4 py-2.5 text-sm text-white font-mono focus:border-accent outline-none" type="number" step="0.01" value={form.credit_limit} onChange={(e) => handleChange('credit_limit', e.target.value)} />
           </div>
+          {error && <div className="text-sm text-error">{error}</div>}
           <div className="flex gap-3 mt-4">
             <button type="button" onClick={onClose} className="flex-1 py-2.5 bg-surface border border-border text-white font-semibold rounded hover:bg-border/50 transition-colors">Cancelar</button>
             <button type="submit" disabled={saving} className="flex-1 py-2.5 bg-accent text-bg font-semibold rounded hover:opacity-90 transition-colors disabled:opacity-50">{saving ? 'Guardando...' : 'Guardar'}</button>

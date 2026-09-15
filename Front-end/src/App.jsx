@@ -4,6 +4,7 @@ import AppLayout from './components/layout/AppLayout';
 import Login from './pages/Login';
 import Dashboard from './pages/Dashboard';
 import PointOfSale from './pages/PointOfSale';
+import SalesHistory from './pages/SalesHistory';
 import CashOut from './pages/CashOut';
 import Inventory from './pages/Inventory';
 import SupplierNotes from './pages/SupplierNotes';
@@ -37,6 +38,7 @@ function App() {
           <Route element={<AppLayout />}>
             <Route path="/dashboard" element={<Dashboard />} />
             <Route path="/pos" element={<PointOfSale />} />
+            <Route path="/sales-history" element={<SalesHistory />} />
             <Route path="/cash-out" element={<CashOut />} />
             <Route path="/inventory" element={<Inventory />} />
             <Route path="/supplier-notes" element={<SupplierNotes />} />

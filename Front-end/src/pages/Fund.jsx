@@ -12,6 +12,7 @@ export default function Fund() {
   const [extractAmount, setExtractAmount] = useState('');
   const [extractReason, setExtractReason] = useState('');
   const [extracting, setExtracting] = useState(false);
+  const [extractError, setExtractError] = useState('');
 
   const fetchFund = async () => {
     setLoading(true);
@@ -37,6 +38,7 @@ export default function Fund() {
   const handleExtract = async () => {
     if (!fund || !extractAmount) return;
     setExtracting(true);
+    setExtractError('');
     try {
       await api.post(`/provider-funds/${fund.id}/extract`, {
         amount: parseFloat(extractAmount),
@@ -46,8 +48,8 @@ export default function Fund() {
       setExtractAmount('');
       setExtractReason('');
       fetchFund();
-    } catch {
-      // silently fail
+    } catch (err) {
+      setExtractError(err.response?.data?.message || 'Error al realizar la extracción');
     } finally {
       setExtracting(false);
     }
@@ -83,7 +85,7 @@ export default function Fund() {
             <Download size={18} className="mr-2" /> Exportar Reporte
           </a>
           <button
-            onClick={() => setShowExtract(true)}
+            onClick={() => { setExtractError(''); setShowExtract(true); }}
             className="px-4 py-2 bg-accent text-bg text-[12px] leading-[16px] tracking-widest uppercase font-bold rounded hover:opacity-90 transition-colors flex items-center font-bold"
           >
             <Plus size={18} className="mr-2" /> Nueva Transferencia
@@ -221,6 +223,7 @@ export default function Fund() {
                 <label className="block text-[12px] tracking-widest uppercase font-bold text-text-secondary mb-1">Motivo</label>
                 <input className="w-full bg-bg border border-border rounded px-4 py-2.5 text-sm text-white focus:border-accent outline-none" value={extractReason} onChange={(e) => setExtractReason(e.target.value)} placeholder="Motivo de la extracción..." />
               </div>
+              {extractError && <div className="text-sm text-error">{extractError}</div>}
             </div>
             <div className="p-6 border-t border-border bg-border/30 flex gap-3">
               <button onClick={() => setShowExtract(false)} className="flex-1 py-2.5 bg-surface border border-border text-white font-semibold rounded hover:bg-border/50 transition-colors">Cancelar</button>
