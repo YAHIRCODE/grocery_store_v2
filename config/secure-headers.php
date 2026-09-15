@@ -645,13 +645,15 @@ return [
         ],
 
         // https://developer.mozilla.org/en-US/docs/Web/HTTP/Headers/Content-Security-Policy/connect-src
+        // Permite que el frontend (React) haga peticiones fetch/axios hacia este mismo origen (tu API).
         'connect-src' => [
-            //
+            'self' => true,
         ],
 
         // https://developer.mozilla.org/en-US/docs/Web/HTTP/Headers/Content-Security-Policy/default-src
+        // Fallback para cualquier directiva no especificada explícitamente: solo el propio origen.
         'default-src' => [
-            //
+            'self' => true,
         ],
 
         // https://developer.mozilla.org/en-US/docs/Web/HTTP/Headers/Content-Security-Policy/fenced-frame-src
@@ -660,8 +662,13 @@ return [
         ],
 
         // https://developer.mozilla.org/en-US/docs/Web/HTTP/Headers/Content-Security-Policy/font-src
+        // Permite las fuentes servidas por Google Fonts (fonts.gstatic.com), usadas en el frontend.
         'font-src' => [
-            //
+            'self' => true,
+
+            'allow' => [
+                'https://fonts.gstatic.com',
+            ],
         ],
 
         // https://developer.mozilla.org/en-US/docs/Web/HTTP/Headers/Content-Security-Policy/form-action
@@ -743,10 +750,11 @@ return [
         ],
 
         // https://developer.mozilla.org/en-US/docs/Web/HTTP/Headers/Content-Security-Policy/script-src
+        // Solo scripts del propio origen (Vite en dev, tus bundles en producción).
         'script-src' => [
             'none' => false,
 
-            'self' => false,
+            'self' => true,
 
             'report-sample' => false,
 
@@ -801,8 +809,13 @@ return [
         ],
 
         // https://developer.mozilla.org/en-US/docs/Web/HTTP/Headers/Content-Security-Policy/style-src
+        // Permite estilos propios y la hoja de estilos de Google Fonts (fonts.googleapis.com).
         'style-src' => [
-            //
+            'self' => true,
+
+            'allow' => [
+                'https://fonts.googleapis.com',
+            ],
         ],
 
         // https://developer.mozilla.org/en-US/docs/Web/HTTP/Headers/Content-Security-Policy/style-src-attr
