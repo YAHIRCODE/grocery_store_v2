@@ -18,6 +18,7 @@ return Application::configure(basePath: dirname(__DIR__))
         ]);
         $middleware->append(\Bepsvpt\SecureHeaders\SecureHeadersMiddleware::class);
         $middleware->redirectGuestsTo(fn () => null);
+        $middleware->statefulApi();
     })
 ->withExceptions(function (Exceptions $exceptions): void {
     $exceptions->render(function (\Illuminate\Auth\AuthenticationException $e, Request $request) {

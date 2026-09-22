@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { TrendingUp, Plus, MoreVertical, X } from 'lucide-react';
+import { TrendingUp, Plus, MoreVertical, Trash2, X } from 'lucide-react';
 import api from '../../services/api';
 
 const fmt = (n) => `$${Number(n || 0).toLocaleString('en-US', { minimumFractionDigits: 2 })}`;
@@ -10,6 +10,7 @@ export default function SuppliersList() {
   const [search] = useState('');
   const [showForm, setShowForm] = useState(false);
   const [editingSupplier, setEditingSupplier] = useState(null);
+  const [listError, setListError] = useState('');
 
   const fetchSuppliers = async () => {
     setLoading(true);
@@ -34,6 +35,17 @@ export default function SuppliersList() {
   );
 
   const totalDebt = suppliers.reduce((s, sup) => s + (sup.debts_sum_amount || 0), 0);
+
+  const deleteSupplier = async (id) => {
+    if (!confirm('¿Eliminar este proveedor?')) return;
+    setListError('');
+    try {
+      await api.delete(`/suppliers/${id}`);
+      setSuppliers((prev) => prev.filter((s) => s.id !== id));
+    } catch (err) {
+      setListError(err.response?.data?.message || 'Error al eliminar el proveedor');
+    }
+  };
 
   if (loading) {
     return (
@@ -73,6 +85,10 @@ export default function SuppliersList() {
         </div>
       </div>
 
+      {listError && (
+        <div className="text-sm text-error bg-error/10 border border-error/30 rounded-lg px-4 py-3">{listError}</div>
+      )}
+
       <div className="bg-surface border border-border rounded-lg overflow-hidden flex flex-col flex-1">
         <div className="overflow-x-auto">
           <table className="w-full text-left border-collapse">
@@ -110,7 +126,13 @@ export default function SuppliersList() {
                       <button
                         onClick={(e) => { e.stopPropagation(); setEditingSupplier(supplier); setShowForm(true); }}
                         className="text-text-secondary hover:text-accent transition-colors p-1 mr-1"
+                        title="Editar"
                       ><MoreVertical size={18} /></button>
+                      <button
+                        onClick={(e) => { e.stopPropagation(); deleteSupplier(supplier.id); }}
+                        className="text-text-secondary hover:text-error transition-colors p-1"
+                        title="Eliminar"
+                      ><Trash2 size={18} /></button>
                     </td>
                   </tr>
                 );

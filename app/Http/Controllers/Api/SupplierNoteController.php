@@ -88,7 +88,7 @@ public function store(Request $request)
         ], 201);
     } catch (\Exception $e) {
         DB::rollBack();
-        return response()->json(['error' => $e->getMessage()], 500);
+        return response()->json(['message' => $e->getMessage()], 500);
     }
 }
 
@@ -208,7 +208,7 @@ public function store(Request $request)
             ], 200);
         } catch (\Exception $e) {
             DB::rollBack();
-            return response()->json(['error' => $e->getMessage()], 500);
+            return response()->json(['message' => $e->getMessage()], 500);
         }
     }
 

@@ -1,33 +1,34 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { AuthContext } from './authContextObject';
-import api from '../services/api';
-
-function getStoredUser() {
-  const storedUser = localStorage.getItem('user');
-  const token = localStorage.getItem('token');
-  if (storedUser && token) {
-    return JSON.parse(storedUser);
-  }
-  return null;
-}
+import api, { ensureCsrfCookie } from '../services/api';
 
 export function AuthProvider({ children }) {
-  const [user, setUser] = useState(getStoredUser);
-  const [loading] = useState(false);
+  const [user, setUser] = useState(null);
+  // La sesión vive en una cookie HttpOnly que JS no puede leer, así que la
+  // única forma de saber si ya hay sesión activa (p.ej. tras recargar la
+  // página) es preguntarle al backend.
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    api.get('/me')
+      .then((response) => setUser(response.data))
+      .catch(() => setUser(null))
+      .finally(() => setLoading(false));
+  }, []);
 
   async function login(email, password) {
+    await ensureCsrfCookie();
     const response = await api.post('/login', { email, password });
-    const { token, user: userData } = response.data;
-    localStorage.setItem('token', token);
-    localStorage.setItem('user', JSON.stringify(userData));
-    setUser(userData);
-    return userData;
+    setUser(response.data.user);
+    return response.data.user;
   }
 
-  function logout() {
-    api.post('/logout').catch(() => {});
-    localStorage.removeItem('token');
-    localStorage.removeItem('user');
+  async function logout() {
+    try {
+      await api.post('/logout');
+    } catch {
+      // ignore
+    }
     setUser(null);
   }
 

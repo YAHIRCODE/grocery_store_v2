@@ -35,7 +35,7 @@ class InventoryAdjustmentController extends Controller
 
         // Validación extra para mermas/salidas
         if ($request->adjustment_type === 'subtraction' && $product->stock < $request->quantity) {
-            return response()->json(['error' => 'No hay suficiente stock para realizar este ajuste (Stock actual: ' . $product->stock . ')'], 422);
+            return response()->json(['message' => 'No hay suficiente stock para realizar este ajuste (Stock actual: ' . $product->stock . ')'], 422);
         }
 
         // Usamos una transacción para asegurar la integridad de los datos
@@ -94,7 +94,7 @@ class InventoryAdjustmentController extends Controller
                 // Validación extra para mermas/salidas
                 if ($product->stock < $request->quantity) {
                     DB::rollBack();
-                    return response()->json(['error' => 'No hay suficiente stock para realizar este ajuste (Stock actual: ' . $product->stock . ')'], 422);
+                    return response()->json(['message' => 'No hay suficiente stock para realizar este ajuste (Stock actual: ' . $product->stock . ')'], 422);
                 }
                 $product->decrement('stock', $request->quantity);
             }
@@ -106,7 +106,7 @@ class InventoryAdjustmentController extends Controller
             return response()->json(['message' => 'Ajuste actualizado exitosamente']);
         } catch (\Exception $e) {
             DB::rollBack();
-            return response()->json(['error' => 'Error al actualizar el ajuste'], 500);
+            return response()->json(['message' => 'Error al actualizar el ajuste'], 500);
         }
     }
 
@@ -134,7 +134,7 @@ class InventoryAdjustmentController extends Controller
             return response()->json(['message' => 'Ajuste de inventario eliminado correctamente']);
         } catch (\Exception $e) {
             DB::rollBack();
-            return response()->json(['error' => 'Error al eliminar el ajuste de inventario'], 500);
+            return response()->json(['message' => 'Error al eliminar el ajuste de inventario'], 500);
         }
     }
 }

@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { UserPlus, Badge, ChevronLeft, ChevronRight, X } from 'lucide-react';
+import { UserPlus, Badge, ChevronLeft, ChevronRight, X, Trash2 } from 'lucide-react';
 import api from '../../services/api';
 
 export default function Employees() {
@@ -9,6 +9,7 @@ export default function Employees() {
   const [showForm, setShowForm] = useState(false);
   const [editingEmp, setEditingEmp] = useState(null);
   const [page, setPage] = useState(1);
+  const [listError, setListError] = useState('');
   const perPage = 20;
 
   const fetchData = async () => {
@@ -34,6 +35,17 @@ export default function Employees() {
 
   const totalPages = Math.ceil(employees.length / perPage);
   const paged = employees.slice((page - 1) * perPage, page * perPage);
+
+  const deleteEmployee = async (id) => {
+    if (!confirm('¿Eliminar este empleado?')) return;
+    setListError('');
+    try {
+      await api.delete(`/employees/${id}`);
+      setEmployees((prev) => prev.filter((e) => e.id !== id));
+    } catch (err) {
+      setListError(err.response?.data?.message || 'Error al eliminar el empleado');
+    }
+  };
 
   if (loading) {
     return (
@@ -64,6 +76,10 @@ export default function Employees() {
             <Badge size={20} className="text-accent mr-3" /> Directorio Activo
           </h3>
         </div>
+
+        {listError && (
+          <div className="mx-4 mb-4 text-sm text-error bg-error/10 border border-error/30 rounded-lg px-4 py-3">{listError}</div>
+        )}
 
         <div className="flex-1 overflow-auto">
           <table className="w-full text-left border-collapse">
@@ -103,9 +119,16 @@ export default function Employees() {
                     <td className="py-3 px-3 text-right">
                       <button
                         onClick={() => { setEditingEmp(emp); setShowForm(true); }}
-                        className="text-white hover:text-accent transition-colors text-[10px] uppercase tracking-widest font-bold border border-accent/30 px-2 py-1 rounded bg-bg"
+                        className="text-white hover:text-accent transition-colors text-[10px] uppercase tracking-widest font-bold border border-accent/30 px-2 py-1 rounded bg-bg mr-2"
                       >
                         Editar
+                      </button>
+                      <button
+                        onClick={() => deleteEmployee(emp.id)}
+                        className="text-text-secondary hover:text-error transition-colors p-1"
+                        title="Eliminar"
+                      >
+                        <Trash2 size={16} />
                       </button>
                     </td>
                   </tr>

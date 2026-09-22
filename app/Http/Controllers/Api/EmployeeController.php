@@ -67,7 +67,7 @@ class EmployeeController extends Controller
             ], 201);
         } catch (\Exception $e) {
             DB::rollBack();
-            return response()->json(['error' => 'Error al crear empleado: ' . $e->getMessage()], 400);
+            return response()->json(['message' => 'Error al crear empleado: ' . $e->getMessage()], 400);
         }
     }
 
@@ -114,7 +114,7 @@ class EmployeeController extends Controller
             return response()->json(['message' => 'Empleado actualizado exitosamente']);
         } catch (\Exception $e) {
             DB::rollBack();
-            return response()->json(['error' => 'Error al actualizar empleado: ' . $e->getMessage()], 400);
+            return response()->json(['message' => 'Error al actualizar empleado: ' . $e->getMessage()], 400);
         }
     }
 
@@ -127,7 +127,7 @@ class EmployeeController extends Controller
 
         $ventasCount = $employee->sales()->count();
         if ($ventasCount > 0) {
-            return response()->json(['error' => "No se puede eliminar este empleado porque tiene {$ventasCount} venta(s) registrada(s)."], 400);
+            return response()->json(['message' => "No se puede eliminar este empleado porque tiene {$ventasCount} venta(s) registrada(s)."], 400);
         }
         $employee->delete();
 

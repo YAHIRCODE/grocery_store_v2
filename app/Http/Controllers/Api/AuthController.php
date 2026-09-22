@@ -21,12 +21,15 @@ class AuthController extends Controller
             return response()->json(['message' => 'Credenciales incorrectas'], 401);
         }
 
+        // Rota el ID de sesión al autenticar (previene fijación de sesión).
+        // La cookie de sesión HttpOnly es ahora el único mecanismo de auth:
+        // ya no se emite ni se devuelve un token Bearer en el body.
+        $request->session()->regenerate();
+
         $user = Auth::user();
-        $token = $user->createToken('auth-token')->plainTextToken;
 
         return response()->json([
             'message' => 'Usuario autenticado',
-            'token' => $token,
             'user' => $user->load(['role', 'employee']),
         ], 200);
     }
@@ -36,14 +39,12 @@ class AuthController extends Controller
         return response()->json($request->user()->load(['role', 'employee']));
     }
 
-public function logout(Request $request)
-{
-    $token = $request->user()->currentAccessToken();
+    public function logout(Request $request)
+    {
+        Auth::guard('web')->logout();
+        $request->session()->invalidate();
+        $request->session()->regenerateToken();
 
-    if ($token && !($token instanceof \Laravel\Sanctum\TransientToken)) {
-        $token->delete();
+        return response()->json(['message' => 'Sesión cerrada correctamente.']);
     }
-
-    return response()->json(['message' => 'Sesión cerrada correctamente.']);
-}
 }

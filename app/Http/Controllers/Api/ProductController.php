@@ -122,14 +122,14 @@ return response()->json($product->load('saleUnits'), 201);
             $ventasCount = $product->sales()->count();
 
             if ($ventasCount > 0) {
-                return response()->json(['error' => "No se puede eliminar: tiene {$ventasCount} ventas."], 400);
+                return response()->json(['message' => "No se puede eliminar: tiene {$ventasCount} ventas."], 400);
             }
 
             $product->delete();
             return response()->json(['message' => 'Producto eliminado correctamente']);
         } catch (\Exception $e) {
 
-            return response()->json(['error' => 'Error al eliminar: ' . $e->getMessage()], 500);
+            return response()->json(['message' => 'Error al eliminar: ' . $e->getMessage()], 500);
         }
     }
 
@@ -158,7 +158,7 @@ return response()->json($product->load('saleUnits'), 201);
         // Solo administradores pueden eliminar permanentemente
         if (!auth()->check() || !auth()->user()->isAdmin()) {
             return response()->json([
-                'error' => 'No tienes permisos para eliminar permanentemente productos'
+                'message' => 'No tienes permisos para eliminar permanentemente productos'
             ], 403);
         }
 
@@ -166,7 +166,7 @@ return response()->json($product->load('saleUnits'), 201);
 
         // Verificar que no tenga ventas
         if ($product->sales()->count() > 0) {
-            return response()->json(['error' => 'No se puede eliminar permanentemente porque tiene ventas registradas.'], 400);
+            return response()->json(['message' => 'No se puede eliminar permanentemente porque tiene ventas registradas.'], 400);
         }
 
         // Eliminar PERMANENTEMENTE (se borra de la BD)

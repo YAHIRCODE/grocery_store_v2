@@ -13,13 +13,13 @@ class AuthTest extends TestCase
     {
         $this->createAdmin();
 
-        $response = $this->postJson('/api/login', [
+        $response = $this->withHeader('Referer', 'http://localhost:5173')->postJson('/api/login', [
             'email' => 'admin@test.com',
             'password' => 'password',
         ]);
 
         $response->assertStatus(200)
-            ->assertJsonStructure(['token']);
+            ->assertJsonStructure(['user']);
     }
 
     public function test_login_wrong_password(): void
@@ -60,9 +60,14 @@ class AuthTest extends TestCase
 
     public function test_logout_success(): void
     {
-        $this->loginAsAdmin();
+        $this->createAdmin();
 
-        $response = $this->postJson('/api/logout', [], $this->authHeaders());
+        $this->withHeader('Referer', 'http://localhost:5173')->postJson('/api/login', [
+            'email' => 'admin@test.com',
+            'password' => 'password',
+        ]);
+
+        $response = $this->withHeader('Referer', 'http://localhost:5173')->postJson('/api/logout');
 
         $response->assertStatus(200);
     }

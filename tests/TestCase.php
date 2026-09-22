@@ -16,7 +16,6 @@ use Illuminate\Support\Facades\Hash;
 abstract class TestCase extends BaseTestCase
 {
     protected User $adminUser;
-    protected string $token;
 
     protected function setUp(): void
     {
@@ -26,15 +25,14 @@ abstract class TestCase extends BaseTestCase
 
     protected function seedRoles(): void
     {
-    Role::firstOrCreate(['name' => 'Administrador']);
-    Role::firstOrCreate(['name' => 'Cajero']);
-    Role::firstOrCreate(['name' => 'Almacenista']);
-        
+        Role::firstOrCreate(['name' => 'Administrador']);
+        Role::firstOrCreate(['name' => 'Cajero']);
+        Role::firstOrCreate(['name' => 'Almacenista']);
     }
 
     protected function createAdmin(): User
     {
-$role = Role::where('name', 'Administrador')->first();
+        $role = Role::where('name', 'Administrador')->first();
 
         $user = User::factory()->create([
             'role_id' => $role->id,
@@ -52,25 +50,29 @@ $role = Role::where('name', 'Administrador')->first();
         return $user;
     }
 
-    protected function loginAsAdmin(): string
+    /**
+     * Autentica al usuario admin vía sesión (no token Bearer), igual
+     * que el flujo real de cookies HttpOnly usado en producción.
+     */
+    protected function loginAsAdmin(): User
     {
         $this->adminUser = $this->createAdmin();
+        $this->actingAs($this->adminUser);
 
-        $response = $this->postJson('/api/login', [
-            'email' => 'admin@test.com',
-            'password' => 'password',
-        ]);
-
-        $this->token = $response->json('token');
-        return $this->token;
+        return $this->adminUser;
     }
 
+    /**
+     * Ya no se usan headers de Authorization: la sesión autenticada
+     * por actingAs() es suficiente en cada request de test.
+     */
     protected function authHeaders(): array
     {
-        if (!isset($this->token)) {
+        if (!isset($this->adminUser)) {
             $this->loginAsAdmin();
         }
-        return ['Authorization' => "Bearer {$this->token}"];
+
+        return [];
     }
 
     protected function createCategory(array $overrides = []): Category
@@ -101,7 +103,6 @@ $role = Role::where('name', 'Administrador')->first();
             $admin = $this->adminUser ?? $this->createAdmin();
             $employee = $admin->employee;
         }
-
         return CashRegister::factory()->create(array_merge([
             'employee_id' => $employee->id,
             'closed_at' => null,
