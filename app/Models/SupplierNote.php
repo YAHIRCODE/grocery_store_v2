@@ -14,6 +14,7 @@ class SupplierNote extends Model
         'supplier_id', 'total_amount', 'status', 'observations',
         'delivery_date', 'reminders',
         'created_by', 'confirmed_by', 'confirmed_at',
+        'paid_by', 'paid_at',
     ];
 
     protected function casts(): array
@@ -22,6 +23,7 @@ class SupplierNote extends Model
             'total_amount' => 'decimal:2',
             'delivery_date' => 'date',
             'confirmed_at' => 'datetime',
+            'paid_at' => 'datetime',
         ];
     }
 
@@ -43,5 +45,10 @@ class SupplierNote extends Model
     public function confirmedBy(): BelongsTo
     {
         return $this->belongsTo(Employee::class, 'confirmed_by');
+    }
+
+    public function paidBy(): BelongsTo
+    {
+        return $this->belongsTo(Employee::class, 'paid_by');
     }
 }

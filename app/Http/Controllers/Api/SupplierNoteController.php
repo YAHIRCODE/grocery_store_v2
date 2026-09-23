@@ -42,7 +42,6 @@ public function store(Request $request)
 
     $validated = $request->validate([
         'supplier_id' => 'required|exists:suppliers,id',
-        'total_amount' => 'required|numeric|min:0',
         'delivery_date' => 'required|date',
         'reminders' => 'nullable|string',
         'products' => 'required|array|min:1',
@@ -53,11 +52,20 @@ public function store(Request $request)
         'products.*.is_gift' => 'nullable|boolean',
     ]);
 
+    // El total nunca se acepta del cliente: se calcula aquí a partir de las
+    // líneas reales, igual que cash_register_id dejó de aceptarse en
+    // SaleController. Confiar en un total mandado por el cliente permitiría
+    // registrar cualquier monto sin relación con los productos capturados.
+    $totalAmount = 0;
+    foreach ($validated['products'] as $product) {
+        $totalAmount += ($product['quantity_agreed'] * $product['price_agreed']) - ($product['discount'] ?? 0);
+    }
+
     DB::beginTransaction();
     try {
         $note = SupplierNote::create([
             'supplier_id' => $validated['supplier_id'],
-            'total_amount' => $validated['total_amount'],
+            'total_amount' => round($totalAmount, 2),
             'delivery_date' => $validated['delivery_date'],
             'reminders' => $validated['reminders'] ?? null,
             'status' => 'pending',
@@ -86,9 +94,10 @@ public function store(Request $request)
             'message' => 'Nota de proveedor creada exitosamente',
             'data' => $note->fresh(['supplier', 'details.product']),
         ], 201);
-    } catch (\Exception $e) {
+    } catch (\Throwable $e) {
         DB::rollBack();
-        return response()->json(['message' => $e->getMessage()], 500);
+        Log::error('Error al crear nota de proveedor', ['error' => $e->getMessage()]);
+        return response()->json(['message' => 'No se pudo crear la nota, intenta de nuevo'], 500);
     }
 }
 
@@ -128,6 +137,16 @@ public function store(Request $request)
     public function destroy($id)
     {
         $note = SupplierNote::findOrFail($id);
+
+        // Una nota confirmada ya incrementó stock de productos reales: borrarla
+        // por completo destruiría la evidencia de por qué cambió ese stock,
+        // igual que update() ya protege el contenido de notas no pendientes.
+        if ($note->status !== 'pending') {
+            return response()->json([
+                'message' => 'Solo se pueden eliminar notas en estado pendiente. Una nota confirmada o pagada ya afectó el inventario y debe conservarse como registro.'
+            ], 400);
+        }
+
         $note->delete();
 
         return response()->json([
@@ -178,13 +197,22 @@ public function store(Request $request)
                     ], 422);
                 }
 
+                // quantity_received se guarda exacto (decimal) para auditoría de la nota.
                 $detail->update(['quantity_received' => $item['quantity_received']]);
-                Product::where('id', $item['product_id'])->increment('stock', $item['quantity_received']);
+
+                // stock es INT a propósito: truncamos hacia abajo, nunca redondeamos
+                // hacia arriba, para no reportar más inventario físico del que en
+                // realidad llegó (ej. 12.9 solo suma 12; el .9 restante no se contabiliza
+                // como stock disponible, aunque sí queda registrado en quantity_received).
+                $cantidadStock = (int) floor($item['quantity_received']);
+
+                Product::where('id', $item['product_id'])->increment('stock', $cantidadStock);
 
                 $diferencias[] = [
                     'producto' => $detail->product->name ?? "ID {$item['product_id']}",
                     'pactado' => $detail->quantity_agreed,
                     'recibido' => $item['quantity_received'],
+                    'stock_aplicado' => $cantidadStock,
                     'diferencia' => $item['quantity_received'] - $detail->quantity_agreed,
                 ];
             }
@@ -206,9 +234,10 @@ public function store(Request $request)
                 'diferencias' => $diferencias,
                 'data' => $note->fresh(['details.product', 'supplier']),
             ], 200);
-        } catch (\Exception $e) {
+        } catch (\Throwable $e) {
             DB::rollBack();
-            return response()->json(['message' => $e->getMessage()], 500);
+            Log::error('Error al confirmar nota de proveedor', ['note_id' => $note->id, 'error' => $e->getMessage()]);
+            return response()->json(['message' => 'No se pudo confirmar la nota, intenta de nuevo'], 500);
         }
     }
 
@@ -386,13 +415,22 @@ public function scan(Request $request)
     }
     public function pay($id)
     {
+        $employee = auth()->user()->employee;
+        if (!$employee) {
+            return response()->json(['message' => 'Empleado no encontrado'], 404);
+        }
+
         $note = SupplierNote::findOrFail($id);
 
         if ($note->status !== 'confirmed') {
             return response()->json(['message' => 'Solo se pueden pagar notas confirmadas'], 400);
         }
 
-        $note->update(['status' => 'paid']);
+        $note->update([
+            'status' => 'paid',
+            'paid_by' => $employee->id,
+            'paid_at' => now(),
+        ]);
 
         return response()->json(['message' => 'Nota marcada como pagada', 'data' => $note], 200);
     }

@@ -10,14 +10,19 @@ class SupplierNoteDetail extends Model
 {
     use HasFactory;
     protected $fillable = [
-        'supplier_note_id', 'product_id', 'quantity_agreed',
-        'quantity_received', 'price_agreed', 'discount', 'is_gift',
+        'supplier_note_id',
+        'product_id',
+        'quantity_agreed',
+        'quantity_received',
+        'price_agreed',
+        'discount',
+        'is_gift',
     ];
 
     protected function casts(): array
     {
         return [
-            'quantity_agreed' => 'integer',
+            'quantity_agreed' => 'decimal:2',
             'quantity_received' => 'decimal:2',
             'price_agreed' => 'decimal:2',
             'discount' => 'decimal:2',
